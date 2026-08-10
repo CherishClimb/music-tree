@@ -57,7 +57,7 @@ describe('practice growth engine', () => {
 
   it('does not create permanent leaves directly from achievements', () => {
     const next = calculatePracticeGrowth(createInitialTreeState(), makePractice(20, 'focused', ['assigned_section', 'rhythm_improved']))
-    expect(next.updatedState.leafCount).toBe(12)
+    expect(next.updatedState.leafCount).toBe(16)
   })
 
   it('creates a flower for clear improvement', () => {

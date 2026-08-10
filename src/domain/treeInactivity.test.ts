@@ -22,7 +22,7 @@ describe('tree inactivity presentation', () => {
     expect(shown.leafCount).toBe(state.leafCount)
     expect(shown.glowLevel).toBeLessThan(state.glowLevel)
     expect(shown).toMatchObject({ stage: 3, branchLevel: 4, fruitCount: 2, completedPieces: ['piece_1'] })
-    expect(state.leafCount).toBe(12)
+    expect(state.leafCount).toBe(16)
   })
 
   it('hides the nibbler again when practice resumes today', () => {

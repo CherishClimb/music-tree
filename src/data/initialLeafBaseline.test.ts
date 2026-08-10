@@ -21,12 +21,12 @@ const legacyDemo29 = () => {
 }
 
 describe('initial earned leaf baseline', () => {
-  it('uses one 12-leaf source of truth for a genuinely fresh repository profile', () => {
-    expect(INITIAL_EARNED_LEAF_COUNT).toBe(12)
+  it('uses one 16-leaf source of truth for a genuinely fresh repository profile', () => {
+    expect(INITIAL_EARNED_LEAF_COUNT).toBe(16)
     expect(createInitialTreeState().leafCount).toBe(INITIAL_EARNED_LEAF_COUNT)
     const repository = createLocalRepository(new MemoryStorage())
-    expect(repository.getTreeState().leafCount).toBe(12)
-    expect(repository.getLeafState().earnedLeafCount).toBe(12)
+    expect(repository.getTreeState().leafCount).toBe(16)
+    expect(repository.getLeafState().earnedLeafCount).toBe(16)
     expect(repository.getChildProfile()).toMatchObject({ id: 'child_001' })
     expect(repository.getCurrentHealth()).toBe(80)
     expect(repository.getDailyWater()).toBe(0)
@@ -48,7 +48,7 @@ describe('initial earned leaf baseline', () => {
     const repository = createLocalRepository(storage)
     expect(repository.getPracticeRecords()).toEqual([])
     repository.resetDemoData()
-    expect(repository.getLeafState().earnedLeafCount).toBe(12)
+    expect(repository.getLeafState().earnedLeafCount).toBe(16)
     expect(repository.getPracticeRecords().length).toBeGreaterThan(0)
     expect(repository.getHomeworkItems().length).toBeGreaterThan(0)
     expect(repository.getCompletedPieces().length).toBeGreaterThan(0)
@@ -61,23 +61,23 @@ describe('initial earned leaf baseline', () => {
     repository.clearStoredData()
     const refreshed = createLocalRepository(storage)
     expect(refreshed.getPracticeRecords()).toEqual([])
-    expect(refreshed.getLeafState().earnedLeafCount).toBe(12)
+    expect(refreshed.getLeafState().earnedLeafCount).toBe(16)
     expect(refreshed.getCurrentHealth()).toBe(80)
   })
 
-  it('export and import preserve the 12-leaf baseline', () => {
+  it('export and import preserve the 16-leaf baseline', () => {
     const source = createLocalRepository(new MemoryStorage())
     const restored = createLocalRepository(new MemoryStorage())
     restored.restoreBackupJson(source.exportBackupJson())
-    expect(restored.getLeafState().earnedLeafCount).toBe(12)
+    expect(restored.getLeafState().earnedLeafCount).toBe(16)
   })
 
   it('Developer Preview changes only the visual stage and persists no leaf value', () => {
     const storage = new MemoryStorage()
     const repository = createLocalRepository(storage)
     expect(selectDeveloperPreviewStage(1, 5, true)).toBe(5)
-    expect(repository.getLeafState().earnedLeafCount).toBe(12)
-    expect(createLocalRepository(storage).getLeafState().earnedLeafCount).toBe(12)
+    expect(repository.getLeafState().earnedLeafCount).toBe(16)
+    expect(createLocalRepository(storage).getLeafState().earnedLeafCount).toBe(16)
     expect(createLocalRepository(storage).getPracticeRecords()).toEqual([])
   })
 
@@ -91,13 +91,13 @@ describe('initial earned leaf baseline', () => {
     const storage = new MemoryStorage()
     storage.setItem(STORAGE_KEY, JSON.stringify(legacyDemo29()))
     const first = createLocalRepository(storage)
-    expect(first.getLeafState().earnedLeafCount).toBe(12)
+    expect(first.getLeafState().earnedLeafCount).toBe(16)
     const persisted = JSON.parse(storage.getItem(STORAGE_KEY)!) as Record<string, unknown>
     expect(persisted.initialLeafBaselineVersion).toBe(INITIAL_LEAF_BASELINE_VERSION)
-    expect(createLocalRepository(storage).getLeafState().earnedLeafCount).toBe(12)
+    expect(createLocalRepository(storage).getLeafState().earnedLeafCount).toBe(16)
   })
 
-  it('preserves genuine progress above 12 instead of broadly rewriting 29', () => {
+  it('preserves genuine progress above 16 instead of broadly rewriting 29', () => {
     const storage = new MemoryStorage()
     const state = legacyDemo29()
     const records = state.practiceRecords as Array<Record<string, unknown>>

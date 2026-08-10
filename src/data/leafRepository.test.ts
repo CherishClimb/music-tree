@@ -58,7 +58,7 @@ describe('LeafGrowthEvent repository integration', () => {
     delete legacy.rewardReminderBaselineLeafCount
     storage.setItem(STORAGE_KEY, JSON.stringify(legacy))
     const repository = createLocalRepository(storage)
-    expect(repository.getLeafState('2026-08-04')).toMatchObject({ migrationBaseEarnedLeafCount: 12, earnedLeafCount: 12 })
+    expect(repository.getLeafState('2026-08-04')).toMatchObject({ migrationBaseEarnedLeafCount: 16, earnedLeafCount: 16 })
     expect(repository.getLeafGrowthEvents()).toHaveLength(0)
     expect(repository.getRewardReminders()).toHaveLength(0)
   })

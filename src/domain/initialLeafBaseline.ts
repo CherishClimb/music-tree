@@ -1,2 +1,2 @@
-export const INITIAL_EARNED_LEAF_COUNT = 12
+export const INITIAL_EARNED_LEAF_COUNT = 16
 export const INITIAL_LEAF_BASELINE_VERSION = 1 as const
