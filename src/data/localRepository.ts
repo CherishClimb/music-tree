@@ -99,6 +99,14 @@ const LEGACY_DEMO_PRACTICE_IDS = ['practice_001', 'practice_002', 'practice_003'
 const LEGACY_DEMO_HOMEWORK_IDS = ['homework_item_001', 'homework_item_002', 'homework_item_003']
 const idsEqual = (values: unknown, expected: string[]) => Array.isArray(values) && values.map((item) => isObject(item) ? item.id : undefined).sort().join('|') === [...expected].sort().join('|')
 const emptyArray = (value: unknown) => Array.isArray(value) && value.length === 0
+const isUntouchedPreviousFresh12 = (value: Record<string, unknown>) => {
+  if (value.initialLeafBaselineVersion !== 1 || value.migrationBaseEarnedLeafCount !== 12 || value.rewardReminderBaselineLeafCount !== 12) return false
+  if (!isObject(value.treeState) || JSON.stringify(value.treeState) !== JSON.stringify({ ...createInitialTreeState(), leafCount: 12 })) return false
+  if (!isObject(value.childProfile) || JSON.stringify(value.childProfile) !== JSON.stringify({ id: 'child_001', displayName: 'Lucy', avatarId: 'ice_princess' })) return false
+  if (!Array.isArray(value.rewards) || JSON.stringify(value.rewards) !== JSON.stringify(defaultRewards)) return false
+  if (!isObject(value.rewardProgress) || value.rewardProgress.childId !== 'child_001' || !emptyArray(value.rewardProgress.rewardPracticeDates) || !emptyArray(value.rewardProgress.rewardCompletedPieceIds) || !emptyArray(value.rewardProgress.rewardHighestTeacherEvaluationIds)) return false
+  return ['practiceRecords', 'homeworkItems', 'teacherEvaluations', 'lessonEvaluations', 'completedPieces', 'concerts', 'specialFruits', 'stageEntrySnapshots', 'learningCycles', 'rewardReminders', 'vacationPeriods', 'rootAwards', 'parentRewards', 'leafGrowthEvents'].every((key) => emptyArray(value[key]))
+}
 const isUntouchedLegacyDemo29 = (value: Record<string, unknown>) => {
   if (value.initialLeafBaselineVersion !== undefined || !isObject(value.treeState) || value.treeState.leafCount !== 29) return false
   if (value.migrationBaseEarnedLeafCount !== undefined && value.migrationBaseEarnedLeafCount !== 29) return false
@@ -110,6 +118,7 @@ const isUntouchedLegacyDemo29 = (value: Record<string, unknown>) => {
 const withProfileDefaults = (value: unknown): unknown => {
   if (!isObject(value) || !isObject(value.childProfile)) return value
   if (isUntouchedLegacyDemo29(value)) value = { ...value, treeState: { ...(value.treeState as Record<string, unknown>), leafCount: INITIAL_EARNED_LEAF_COUNT }, migrationBaseEarnedLeafCount: INITIAL_EARNED_LEAF_COUNT, rewardReminderBaselineLeafCount: INITIAL_EARNED_LEAF_COUNT, initialLeafBaselineVersion: INITIAL_LEAF_BASELINE_VERSION }
+  if (isObject(value) && isUntouchedPreviousFresh12(value)) value = { ...value, treeState: { ...(value.treeState as Record<string, unknown>), leafCount: INITIAL_EARNED_LEAF_COUNT }, migrationBaseEarnedLeafCount: INITIAL_EARNED_LEAF_COUNT, rewardReminderBaselineLeafCount: INITIAL_EARNED_LEAF_COUNT, initialLeafBaselineVersion: INITIAL_LEAF_BASELINE_VERSION }
   if (!isObject(value) || !isObject(value.childProfile)) return value
   const avatarId = isAvatarId(value.childProfile.avatarId)
     ? value.childProfile.avatarId
