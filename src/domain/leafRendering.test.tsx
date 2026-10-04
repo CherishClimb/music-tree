@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { TreeLeaves } from '../components/tree/TreeLeaves'
+import { MusicTree } from '../components/tree/MusicTree'
+import { createInitialTreeState } from './treeGrowthEngine'
 import { REWARD_FRUIT_SLOTS } from './parentReward'
 import { selectLeafState } from './leafGrowth'
 import { createLeafRenderPlan } from './leafRendering'
@@ -66,5 +68,24 @@ describe('unlimited deterministic leaf rendering', () => {
     expect(markup).toContain('leaf-overflow-cluster')
     expect(markup).toContain('data-leaf-count=')
     expect(markup).not.toContain('role="button"')
+  })
+})
+
+describe('SVG gradient rendering context', () => {
+  it('preserves native gradient casing and renders fragments inside SVG without React errors', () => {
+    // A spy without a mock implementation still forwards every diagnostic.
+    const errors = vi.spyOn(console, 'error')
+    try {
+      const fragment = renderToStaticMarkup(<svg><TreeLeaves stage={2} leafCount={52} /></svg>)
+      const tree = renderToStaticMarkup(<MusicTree treeState={{ ...createInitialTreeState(), stage: 2, leafCount: 52 }} />)
+      for (const markup of [fragment, tree]) {
+        expect(markup).toMatch(/^<svg[ >]/)
+        expect(markup).toContain('<defs><linearGradient')
+        expect(markup).toContain('<stop offset="0%"')
+        expect(markup).toContain('</linearGradient>')
+        expect(markup).toMatch(/<\/svg>$/)
+      }
+      expect(errors).not.toHaveBeenCalled()
+    } finally { errors.mockRestore() }
   })
 })

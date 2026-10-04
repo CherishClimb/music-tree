@@ -67,7 +67,7 @@ describe('Parent Reward Fruit interaction', () => {
       expect(second).toEqual(first)
       expect(first).toMatchObject({ status: 'claimed', claimedAt: '2026-08-04T12:00:00.000Z', fruitSlotId: granted.fruitSlotId })
       expect(repository.getParentRewards()).toHaveLength(1)
-      const markup = renderToStaticMarkup(<ParentRewardFruits rewards={repository.getParentRewards()} />)
+      const markup = renderToStaticMarkup(<svg><ParentRewardFruits rewards={repository.getParentRewards()} /></svg>)
       expect(markup).toContain('parent-reward-fruit berry claimed')
       expect(markup).not.toContain('berry available')
       expect(markup).toContain(`data-fruit-slot="${granted.fruitSlotId}"`)
