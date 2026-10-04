@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDemoState, createLocalRepository, STORAGE_KEY } from './localRepository'
+
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-05T12:00:00.000Z')) })
+afterEach(() => vi.useRealTimers())
 
 class MemoryStorage {
   values = new Map<string, string>()

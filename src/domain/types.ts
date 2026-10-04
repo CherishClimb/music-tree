@@ -63,6 +63,7 @@ export type TreeState = {
 export type PracticeRecord = {
   id: string
   childId: string
+  // Local calendar date of the activity (YYYY-MM-DD), independent of audit timestamps.
   date: string
   minutes: number
   quality: QualityLevel

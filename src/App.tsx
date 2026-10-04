@@ -17,7 +17,7 @@ import { selectDominantPendingReminder, type RewardReminderStatus } from './doma
 import { VacationManager } from './components/parent/VacationManager'
 import { ParentStageProgress } from './components/parent/ParentStageProgress'
 import { SUPPORTED_REWARD_FRUIT_TYPES, type ParentReward, type RewardFruitType } from './domain/parentReward'
-import { localCalendarDate } from './domain/localCalendarDate'
+import { isCalendarDate, localCalendarDate } from './domain/localCalendarDate'
 import { countDailyPracticeRecords, MAX_DAILY_PRACTICE_RECORDS, selectDailyWater } from './domain/water'
 import type { LeafState } from './domain/leafGrowth'
 import { selectDeveloperPreviewStage } from './domain/developmentPreview'
@@ -47,6 +47,7 @@ function App() {
   const [improvement, setImprovement] = useState<PracticeRecord['improvement']>('small')
   const [note, setNote] = useState('')
   const [practiceFormMessage, setPracticeFormMessage] = useState('')
+  const [practiceDate, setPracticeDate] = useState(() => localCalendarDate())
   const [rewards, setRewards] = useState<FamilyReward[]>(() => localRepository.getRewards())
   const [rewardName, setRewardName] = useState('')
   const [rewardFruitType, setRewardFruitType] = useState<RewardFruitType>('apple')
@@ -79,16 +80,18 @@ function App() {
   const currentHealth = localRepository.getCurrentHealth(currentLocalDate)
   const currentLeafState: LeafState = localRepository.getLeafState(currentLocalDate)
   const visibleTreeState = { ...treeState, leafCount: currentLeafState.visibleLeafCount }
-  const todayPracticeRecordCount = countDailyPracticeRecords(records, childProfile.id, currentLocalDate)
+  const selectedDatePracticeRecordCount = countDailyPracticeRecords(records, childProfile.id, practiceDate)
+  const practiceDateValid = isCalendarDate(practiceDate) && practiceDate <= currentLocalDate
+  const practiceDateLabel = practiceDate === currentLocalDate ? 'today' : `for ${practiceDate}`
 
   const handleSubmitPractice = () => {
     try {
-      const result = localRepository.savePracticeRecord({ date: currentLocalDate, minutes, quality, achievements: achievement ? [achievement] : [], customAchievement: achievement === 'other' ? customAchievement : '', improvement, parentNote: note })
+      const result = localRepository.savePracticeRecord({ date: practiceDate, minutes, quality, achievements: achievement ? [achievement] : [], customAchievement: achievement === 'other' ? customAchievement : '', improvement, parentNote: note })
       setRecords(localRepository.getPracticeRecords())
       setTreeState(result.treeState)
       setRewardReminders(localRepository.getRewardReminders())
       setMessage(result.message)
-      setPracticeFormMessage('Practice saved safely.')
+      setPracticeFormMessage(practiceDate === currentLocalDate ? 'Practice saved safely.' : `Practice saved for ${practiceDate}.`)
       setCustomAchievement('')
     } catch (caught) {
       const errorMessage = caught instanceof Error ? caught.message : 'Practice could not be saved.'
@@ -284,6 +287,11 @@ function App() {
             <div className="card form-card parent-daily-section" data-parent-section="daily-practice">
               <h2>Daily practice</h2>
               <label>
+                Practice date
+                <input type="date" value={practiceDate} max={currentLocalDate} required aria-describedby="practice-date-help" onChange={(event) => { setPracticeDate(event.target.value); setPracticeFormMessage('') }} />
+              </label>
+              <small id="practice-date-help">Choose today or an earlier day when the practice happened.</small>
+              <label>
                 Practice minutes
                 <input
                   type="number"
@@ -337,11 +345,11 @@ function App() {
                   rows={3}
                 />
               </label>
-              <button type="button" className="primary-button" onClick={handleSubmitPractice}>
+              <button type="button" className="primary-button" disabled={!practiceDateValid} onClick={handleSubmitPractice}>
                 Save practice
               </button>
               {practiceFormMessage && <p className="form-message" role="status">{practiceFormMessage}</p>}
-              <p className="practice-limit-note">{todayPracticeRecordCount >= MAX_DAILY_PRACTICE_RECORDS ? 'Three practice moments are safely saved for today.' : `${todayPracticeRecordCount} of ${MAX_DAILY_PRACTICE_RECORDS} practice moments saved today.`}</p>
+              {practiceDateValid && <p className="practice-limit-note">{selectedDatePracticeRecordCount >= MAX_DAILY_PRACTICE_RECORDS ? `Three practice moments are safely saved ${practiceDate === currentLocalDate ? 'for today' : practiceDateLabel}.` : `${selectedDatePracticeRecordCount} of ${MAX_DAILY_PRACTICE_RECORDS} practice moments saved ${practiceDateLabel}.`}</p>}
             </div>
           )}
 

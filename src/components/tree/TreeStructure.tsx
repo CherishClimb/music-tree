@@ -96,8 +96,10 @@ export function TreeStructure({ stage, flowerCount, fruitCount, crownTransform, 
           <g key={cluster.id} transform={`translate(${cluster.x} ${cluster.y})`} className={onFruitSelect ? 'crystal-fruit music-fruit-cluster interactive-tree-item' : 'crystal-fruit music-fruit-cluster'} role={onFruitSelect ? 'button' : undefined} tabIndex={onFruitSelect ? 0 : undefined} aria-label={onFruitSelect ? `${cluster.representedFruitCount} completed-piece fruits` : undefined} data-fruit-count={cluster.representedFruitCount} onClick={onFruitSelect ? () => onFruitSelect(cluster.id) : undefined} onKeyDown={onFruitSelect ? (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onFruitSelect(cluster.id) } } : undefined}>
             {onFruitSelect && <circle className="fruit-hit-target" r="22" aria-hidden="true" />}
             <path d="M0 -12 L11 -4 L8 10 L-8 10 L-11 -4 Z" />
-            <circle className="music-fruit-count-disc" cx="8" cy="-9" r="8" />
-            <text className="music-fruit-count" x="8" y="-6" textAnchor="middle">{cluster.representedFruitCount}</text>
+            {cluster.representedFruitCount > 1 && <>
+              <circle className="music-fruit-count-disc" cx="8" cy="-9" r="8" />
+              <text className="music-fruit-count" x="8" y="-6" textAnchor="middle">{cluster.representedFruitCount}</text>
+            </>}
           </g>
         ))}
       </g>
