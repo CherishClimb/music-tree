@@ -14,6 +14,8 @@ export interface TreeStageBlueprint {
   availableLeafSlotIds: string[]
   availableFlowerSlotIds: string[]
   availableFruitSlotIds: string[]
+  // Defaults to true for existing stages; false keeps unsupported fruit artwork out of the render plan.
+  allowFruitOverflow?: boolean
   availableCreatureSlotIds: string[]
   availableDecorationSlotIds: string[]
 }
@@ -226,7 +228,8 @@ export const TREE_STAGE_BLUEPRINTS: Record<TreeStage, TreeStageBlueprint> = {
     availableCreatureSlotIds: [],
     availableDecorationSlotIds: [],
   },
-  2: { stage: 2, name: 'Crystal Music Tree', trunkPath: STAGE_ONE_TRUNK_PATH, trunkHighlightPath: STAGE_ONE_TRUNK_HIGHLIGHT_PATH, structureScale: { x: 0.82, y: 0.82 }, crownScale: { x: 0.84, y: 0.8 }, rootPaths: roots, branchIds: branchIdsFor(2), availableLeafSlotIds: STAGE_TWO_LEAF_IDS, availableFlowerSlotIds: TREE_FLOWER_SLOTS.slice(0, 4).map((slot) => slot.id), availableFruitSlotIds: ['fruit_slot_01'], availableCreatureSlotIds: [], availableDecorationSlotIds: [] },
+  // Crystal Music Tree has no polygon fruit artwork; earned fruit remains in saved progress.
+  2: { stage: 2, name: 'Crystal Music Tree', trunkPath: STAGE_ONE_TRUNK_PATH, trunkHighlightPath: STAGE_ONE_TRUNK_HIGHLIGHT_PATH, structureScale: { x: 0.82, y: 0.82 }, crownScale: { x: 0.84, y: 0.8 }, rootPaths: roots, branchIds: branchIdsFor(2), availableLeafSlotIds: STAGE_TWO_LEAF_IDS, availableFlowerSlotIds: TREE_FLOWER_SLOTS.slice(0, 4).map((slot) => slot.id), availableFruitSlotIds: [], allowFruitOverflow: false, availableCreatureSlotIds: [], availableDecorationSlotIds: [] },
   3: { stage: 3, name: 'Singing Winter Tree', trunkPath: STAGE_ONE_TRUNK_PATH, trunkHighlightPath: STAGE_ONE_TRUNK_HIGHLIGHT_PATH, structureScale: { x: 0.91, y: 0.91 }, crownScale: { x: 0.94, y: 0.91 }, rootPaths: roots, branchIds: branchIdsFor(3), availableLeafSlotIds: STAGE_THREE_LEAF_IDS, availableFlowerSlotIds: TREE_FLOWER_SLOTS.slice(0, 6).map((slot) => slot.id), availableFruitSlotIds: TREE_FRUIT_SLOTS.slice(0, 3).map((slot) => slot.id), availableCreatureSlotIds: ['creature_slot_001'], availableDecorationSlotIds: ['decoration_slot_001'] },
   4: { stage: 4, name: 'Great Musical Tree', trunkPath: STAGE_ONE_TRUNK_PATH, trunkHighlightPath: STAGE_ONE_TRUNK_HIGHLIGHT_PATH, structureScale: { x: 1, y: 0.97 }, crownScale: { x: 1.03, y: 1 }, rootPaths: roots, branchIds: branchIdsFor(4), availableLeafSlotIds: STAGE_FOUR_LEAF_IDS, availableFlowerSlotIds: TREE_FLOWER_SLOTS.slice(0, 9).map((slot) => slot.id), availableFruitSlotIds: TREE_FRUIT_SLOTS.slice(0, 6).map((slot) => slot.id), availableCreatureSlotIds: TREE_CREATURE_SLOTS.slice(0, 3).map((slot) => slot.id), availableDecorationSlotIds: TREE_DECORATION_SLOTS.slice(0, 3).map((slot) => slot.id) },
   5: { stage: 5, name: 'Grand Memory Tree', trunkPath: STAGE_ONE_TRUNK_PATH, trunkHighlightPath: STAGE_ONE_TRUNK_HIGHLIGHT_PATH, structureScale: { x: 1.08, y: 1.05 }, crownScale: { x: 1.12, y: 1.08 }, rootPaths: roots, branchIds: branchIdsFor(5), availableLeafSlotIds: STAGE_FIVE_LEAF_IDS, availableFlowerSlotIds: TREE_FLOWER_SLOTS.map((slot) => slot.id), availableFruitSlotIds: TREE_FRUIT_SLOTS.map((slot) => slot.id), availableCreatureSlotIds: TREE_CREATURE_SLOTS.map((slot) => slot.id), availableDecorationSlotIds: TREE_DECORATION_SLOTS.map((slot) => slot.id) },

@@ -28,7 +28,8 @@ describe('tree overflow content', () => {
       const fruits = renderToStaticMarkup(<svg><TreeStructure stage={stage} flowerCount={0} fruitCount={fruitCount} crownTransform="" onFruitSelect={() => {}} /></svg>)
       expect(badgeCounts(fruits, 'music-fruit-count')).toEqual(fruitPlan.clusters.filter((cluster) => cluster.representedFruitCount > 1).map((cluster) => cluster.representedFruitCount))
       expect((fruits.match(/class="fruit-hit-target"/g) ?? []).length).toBe(fruitPlan.fruits.length + fruitPlan.clusters.length)
-      expect(fruitPlan.representedFruitCount).toBe(fruitCount)
+      // Stage 2 retains earned fruit in storage without displaying polygon fruit nodes.
+      expect(fruitPlan.representedFruitCount).toBe(stage === 2 ? 0 : fruitCount)
     }
   })
 

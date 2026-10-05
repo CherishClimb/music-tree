@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Stage 2 polygon regression > preserves the complete Stage 1 SVG 1`] = `"de004e28e6e563f6e47cb05a4feed664b9b1accfbc3b30170b6c0fdb944ba213"`;
+
+exports[`Stage 2 polygon regression > preserves the complete Stage 2 SVG apart from the five fruit polygons 1`] = `"7f94a369d7f31a72c4fa5f8413e8906dc1088f1019ce98ab959615fb539640b0"`;
+
+exports[`Stage 2 polygon regression > preserves the complete Stage 3 SVG 1`] = `"763ff6e4005c902d3cf9ea2992aad5aa26eae43fb2bac4dcf9e1be8777746f28"`;
+
+exports[`Stage 2 polygon regression > preserves the complete Stage 4 SVG 1`] = `"611b761c7dc5e0e903364c811e7dcbd98e1ed347e69d3bed59038e7029c52299"`;
+
+exports[`Stage 2 polygon regression > preserves the complete Stage 5 SVG 1`] = `"4c294f0c81332471fa643a56fa095b002a0971224586542285d81d60e4f18691"`;

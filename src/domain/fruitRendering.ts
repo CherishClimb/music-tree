@@ -10,7 +10,7 @@ export function createMusicFruitRenderPlan(stage: TreeStage, requestedFruitCount
   const blueprint = TREE_STAGE_BLUEPRINTS[stage]
   const fixedSlots = TREE_FRUIT_SLOTS.filter((slot) => blueprint.availableFruitSlotIds.includes(slot.id))
   const fruits = fixedSlots.slice(0, fruitCount)
-  const overflowCount = Math.max(0, fruitCount - fruits.length)
+  const overflowCount = blueprint.allowFruitOverflow === false ? 0 : Math.max(0, fruitCount - fruits.length)
   const clusterCount = Math.min(overflowCount, MAX_MUSIC_FRUIT_CLUSTERS)
   const clusterAnchors = fixedSlots.length > 0 ? fixedSlots : TREE_FRUIT_SLOTS.slice(0, 3)
   const clusters: MusicFruitCluster[] = []
