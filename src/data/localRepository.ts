@@ -17,7 +17,7 @@ import { INITIAL_EARNED_LEAF_COUNT, INITIAL_LEAF_BASELINE_VERSION } from '../dom
 export const STORAGE_KEY = 'music-tree:mvp:v1'
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
-type PersistedState = {
+export type PersistedState = {
   version: 1
   childProfile: ChildProfile
   practiceRecords: PracticeRecord[]
@@ -139,7 +139,7 @@ const isState = (value: unknown): value is PersistedState => {
   return (value.practiceRecords as unknown[]).every((record) => isObject(record) && typeof record.id === 'string' && typeof record.childId === 'string' && isDate(record.date) && typeof record.minutes === 'number' && ['difficult', 'normal', 'focused'].includes(String(record.quality)) && Array.isArray(record.achievements) && typeof record.createdAt === 'string' && typeof record.updatedAt === 'string')
 }
 
-const parseBackup = (json: string): PersistedState => {
+export const parseBackup = (json: string): PersistedState => {
   let parsed: unknown
   try { parsed = JSON.parse(json) } catch { throw new Error('This file is not valid JSON.') }
   parsed = withProfileDefaults(parsed)
@@ -196,7 +196,15 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     }
   }
   let state = load()
-  const persist = () => writeStorage(STORAGE_KEY, JSON.stringify(state))
+  const persistenceListeners = new Set<(json: string) => void>()
+  const persist = () => {
+    const json = JSON.stringify(state)
+    writeStorage(STORAGE_KEY, json)
+    for (const listener of persistenceListeners) {
+      // A remote save failure must never turn a successful local save into a failure.
+      try { listener(json) } catch (error) { console.warn('Music Tree sync listener failed.', error) }
+    }
+  }
   const progressionInput = (): StageProgressionInput => { const currentStage = Math.min(4, Math.max(1, state.treeState.stage)) as 1 | 2 | 3 | 4; const entry = [...state.stageEntrySnapshots].reverse().find((snapshot) => snapshot.newStage === currentStage)?.stageEntryDate ?? practiceDates(state.practiceRecords)[0] ?? today(); return { currentStage, stageEntryDate: entry, currentDate: today(), practiceRecords: state.practiceRecords.map((record) => ({ ...record, valid: true, saved: true })), learningCycles: state.learningCycles, lessonEvaluations: state.lessonEvaluations, completedPieces: state.completedPieces, concertRecords: state.concerts, vacationPeriods: state.vacationPeriods } }
   const applyProgression = () => { const input = progressionInput(); const result = evaluateStageProgression(input); const snapshot = createStageEntrySnapshot(result, input, state.stageEntrySnapshots, makeId('stage_entry')); if (snapshot) { state.stageEntrySnapshots.push(snapshot); state.treeState.stage = Math.max(state.treeState.stage, snapshot.newStage) } return { result, snapshot } }
   const syncStats = () => { Object.assign(state.treeState, derivePracticeStats(state.practiceRecords)) }
@@ -210,6 +218,9 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
 
   return {
     reload: () => { state = load(); syncStats(); syncLeafCount() }, resetDemoData: () => { state = createDemoState(); syncStats(); syncLeafCount(); persist() }, clearStoredData: () => { storage?.removeItem(STORAGE_KEY); state = createFreshState(); persist() }, getLoadWarning: () => loadWarning,
+    subscribeToPersistence: (listener: (json: string) => void) => { persistenceListeners.add(listener); return () => { persistenceListeners.delete(listener) } },
+    // Hydrate an already validated complete snapshot without emitting a local mutation.
+    loadSnapshot: (json: string) => { parseBackup(json); const snapshot = JSON.parse(json) as PersistedState; writeStorage(STORAGE_KEY, json); state = snapshot; loadWarning = null },
     exportBackupJson: () => JSON.stringify(state, null, 2),
     exportPracticeCsv: () => ['date,minutes,quality,achievements,improvement,parent note', ...[...state.practiceRecords].sort(comparePracticeRecords).map((record) => [record.date, record.minutes, record.quality, record.achievements.join('; '), record.improvement, record.parentNote].map(csvCell).join(','))].join('\r\n'),
     validateBackupJson: (json: string) => { parseBackup(json); return true },
