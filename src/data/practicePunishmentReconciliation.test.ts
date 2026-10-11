@@ -136,7 +136,7 @@ describe('practice mutation punishment reconciliation', () => {
     expect(listener).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps practice growth, health, water, stages, roots and rewards independent', () => {
+  it('keeps practice growth, health, water, stages, roots, rewards and creatures independent', () => {
     const { repository: active } = setup()
     const inactive = createLocalRepository(new MemoryStorage(), 'UTC')
     clock('2026-10-11')

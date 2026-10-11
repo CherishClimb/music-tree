@@ -16,11 +16,15 @@ import { evaluateLeafRewardEligibility, normalizeLeafRewardConfig, type LeafRewa
 import { INITIAL_EARNED_LEAF_COUNT, INITIAL_LEAF_BASELINE_VERSION } from '../domain/initialLeafBaseline'
 import { appliedLeafPunishmentLoss, LeafPunishmentDataError, reconcileLeafPunishmentLedger, shiftPunishmentDate, validateLeafPunishmentLedger, type LeafPunishmentLedger } from './leafPunishmentLedger'
 
+import type { CreatureId } from '../domain/creatures/creatureCatalog'
+import { createCreatureCollection, isCreatureCollection, migrateCreatureCollection, sendCreatureHome, showCreatureOnTree, selectCreatureProgress, unlockEarnedCreatures, type CreatureCollection } from '../domain/creatures/creatureCollection'
+
 export const STORAGE_KEY = 'music-tree:mvp:v1'
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 export type PersistedState = {
   version: 1
+  creatureCollection: CreatureCollection
   childProfile: ChildProfile
   leafRewardConfig: LeafRewardConfig
   practiceRecords: PracticeRecord[]
@@ -60,6 +64,7 @@ export const createFreshState = (): PersistedState => {
     version: 1,
     leafRewardConfig: normalizeLeafRewardConfig(undefined),
     leafPunishment: null,
+    creatureCollection: createCreatureCollection(INITIAL_EARNED_LEAF_COUNT),
     childProfile: { id: 'child_001', displayName: 'Lucy', avatarId: 'ice_princess' },
     practiceRecords: [], homeworkItems: [], teacherEvaluations: [], lessonEvaluations: [], completedPieces: [], concerts: [], rewards: clone(defaultRewards),
     rewardProgress: { childId: 'child_001', rewardPracticeDates: [], rewardCompletedPieceIds: [], rewardHighestTeacherEvaluationIds: [], updatedAt: today() },
@@ -82,6 +87,7 @@ export const createDemoState = (): PersistedState => {
     version: 1,
     leafRewardConfig: normalizeLeafRewardConfig(undefined),
     leafPunishment: null,
+    creatureCollection: createCreatureCollection(INITIAL_EARNED_LEAF_COUNT),
     childProfile: { id: 'child_001', displayName: 'Lucy', avatarId: 'ice_princess' },
     practiceRecords: records,
     homeworkItems: [
@@ -139,22 +145,29 @@ const withProfileDefaults = (value: unknown): unknown => {
     : value.homeworkItems
   const legacyLeafCount = isObject(value.treeState) && typeof value.treeState.leafCount === 'number' ? value.treeState.leafCount : 0
   const migrationBaseEarnedLeafCount = typeof value.migrationBaseEarnedLeafCount === 'number' ? value.migrationBaseEarnedLeafCount : legacyLeafCount
-  return { ...value, leafRewardConfig: normalizeLeafRewardConfig(value.leafRewardConfig), leafPunishment: value.leafPunishment ?? null, childProfile: { id: value.childProfile.id, displayName: value.childProfile.displayName, avatarId }, homeworkItems, rewardReminders: Array.isArray(value.rewardReminders) ? value.rewardReminders : [], vacationPeriods: Array.isArray(value.vacationPeriods) ? value.vacationPeriods : [], rootAwards: Array.isArray(value.rootAwards) ? value.rootAwards : [], parentRewards: Array.isArray(value.parentRewards) ? value.parentRewards : [], leafGrowthEvents: Array.isArray(value.leafGrowthEvents) ? value.leafGrowthEvents : [], migrationBaseEarnedLeafCount, rewardReminderBaselineLeafCount: typeof value.rewardReminderBaselineLeafCount === 'number' ? value.rewardReminderBaselineLeafCount : migrationBaseEarnedLeafCount }
+  return { ...value, leafRewardConfig: normalizeLeafRewardConfig(value.leafRewardConfig), ...(value.creatureCollection === undefined ? {} : { creatureCollection: migrateCreatureCollection(value.creatureCollection) }), childProfile: { id: value.childProfile.id, displayName: value.childProfile.displayName, avatarId }, homeworkItems, rewardReminders: Array.isArray(value.rewardReminders) ? value.rewardReminders : [], vacationPeriods: Array.isArray(value.vacationPeriods) ? value.vacationPeriods : [], rootAwards: Array.isArray(value.rootAwards) ? value.rootAwards : [], parentRewards: Array.isArray(value.parentRewards) ? value.parentRewards : [], leafGrowthEvents: Array.isArray(value.leafGrowthEvents) ? value.leafGrowthEvents : [], migrationBaseEarnedLeafCount, rewardReminderBaselineLeafCount: typeof value.rewardReminderBaselineLeafCount === 'number' ? value.rewardReminderBaselineLeafCount : migrationBaseEarnedLeafCount }
 }
-const permanentLeafCount = (state: PersistedState) => selectLeafState({
+type CompatibleState = Omit<PersistedState, 'creatureCollection'> & { creatureCollection?: CreatureCollection }
+const permanentLeafCount = (state: CompatibleState) => selectLeafState({
   migrationBaseEarnedLeafCount: state.migrationBaseEarnedLeafCount,
   events: state.leafGrowthEvents,
   childId: state.childProfile.id,
   health: 100,
 }).earnedLeafCount
-const isState = (value: unknown): value is PersistedState => {
+const withCreatureCollection = (state: CompatibleState): PersistedState => ({
+  ...state,
+  leafPunishment: state.leafPunishment ?? null,
+  creatureCollection: state.creatureCollection ?? createCreatureCollection(permanentLeafCount(state)),
+})
+const isState = (value: unknown): value is CompatibleState => {
+  if (isObject(value) && value.creatureCollection !== undefined && !isCreatureCollection(value.creatureCollection)) return false
   if (!isObject(value) || value.version !== 1 || !isObject(value.childProfile) || !isObject(value.treeState)) return false
   normalizeLeafRewardConfig(value.leafRewardConfig)
   const profile = value.childProfile
   if (typeof profile.id !== 'string' || typeof profile.displayName !== 'string' || !isAvatarId(profile.avatarId)) return false
   const arrays = ['practiceRecords', 'homeworkItems', 'teacherEvaluations', 'lessonEvaluations', 'completedPieces', 'concerts', 'rewards', 'specialFruits', 'stageEntrySnapshots', 'learningCycles', 'rewardReminders', 'vacationPeriods', 'rootAwards', 'parentRewards', 'leafGrowthEvents']
   if (!arrays.every((key) => Array.isArray(value[key]))) return false
-  validateLeafPunishmentLedger(value.leafPunishment, profile.id, permanentLeafCount(value as unknown as PersistedState))
+  validateLeafPunishmentLedger(value.leafPunishment, profile.id, permanentLeafCount(value as unknown as CompatibleState))
   return (value.practiceRecords as unknown[]).every((record) => isObject(record) && typeof record.id === 'string' && typeof record.childId === 'string' && isDate(record.date) && typeof record.minutes === 'number' && ['difficult', 'normal', 'focused'].includes(String(record.quality)) && Array.isArray(record.achievements) && typeof record.createdAt === 'string' && typeof record.updatedAt === 'string')
 }
 
@@ -163,7 +176,7 @@ export const parseBackup = (json: string): PersistedState => {
   try { parsed = JSON.parse(json) } catch { throw new Error('This file is not valid JSON.') }
   parsed = withProfileDefaults(parsed)
   if (!isState(parsed)) throw new Error('This file is not a valid Music Tree MVP backup.')
-  return parsed
+  return withCreatureCollection(parsed)
 }
 
 const csvCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`
@@ -181,7 +194,7 @@ export const derivePracticeStats = (records: PracticeRecord[]) => {
   return { totalPracticeDays: dates.length, totalPracticeMinutes: records.reduce((sum, record) => sum + Math.max(0, record.minutes), 0), currentPracticeStreak: currentStreak, longestPracticeStreak: longest, lastPracticeDate: dates.at(-1) ?? null }
 }
 
-export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) => {
+export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone, creatureRandom: () => number = Math.random) => {
   const today = () => localCalendarDate(new Date(), timeZone)
   let storedSnapshot: string | null | undefined
   const validatePracticeInput = (input: Pick<PracticeRecord, 'date' | 'minutes' | 'quality'>) => {
@@ -204,8 +217,9 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     try {
       const parsed = withProfileDefaults(JSON.parse(raw))
       if (!isState(parsed)) throw new Error('Saved data failed validation.')
-      try { writeStorage(STORAGE_KEY, JSON.stringify(parsed)) } catch { /* valid data remains available in memory */ }
-      return parsed
+      const migrated = withCreatureCollection(parsed)
+      try { writeStorage(STORAGE_KEY, JSON.stringify(migrated)) } catch { /* valid data remains available in memory */ }
+      return migrated
     } catch (error) {
       if (error instanceof LeafPunishmentDataError) throw error
       loadWarning = 'Saved Music Tree data could not be loaded. Safe demo data was restored.'
@@ -225,6 +239,7 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     }
   }
   const persist = () => {
+    state.creatureCollection = unlockEarnedCreatures(state.creatureCollection, permanentLeafCount(state), now(), creatureRandom)
     const json = JSON.stringify(state)
     writeStorage(STORAGE_KEY, json)
     notifyPersistence(json)
@@ -247,7 +262,7 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     const next = { ...state, leafPunishment: ledger }
     const json = JSON.stringify(next)
     // Commit in memory and notify sync only after the single local write succeeds.
-    // Deliberately bypass persist(): punishment writes only the ledger snapshot.
+    // Deliberately bypass persist(): punishment must not unlock creatures.
     writeStorage(STORAGE_KEY, json)
     state = next
     notifyPersistence(json)
@@ -278,6 +293,13 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
       state = previous
       throw error
     }
+  }
+  const saveCreatureVisit = (collection: CreatureCollection) => {
+    const previous = state.creatureCollection
+    state.creatureCollection = collection
+    try { persist() }
+    catch (error) { state.creatureCollection = previous; throw error }
+    return clone(state.creatureCollection)
   }
   const progressionInput = (): StageProgressionInput => { const currentStage = Math.min(4, Math.max(1, state.treeState.stage)) as 1 | 2 | 3 | 4; const entry = [...state.stageEntrySnapshots].reverse().find((snapshot) => snapshot.newStage === currentStage)?.stageEntryDate ?? practiceDates(state.practiceRecords)[0] ?? today(); return { currentStage, stageEntryDate: entry, currentDate: today(), practiceRecords: state.practiceRecords.map((record) => ({ ...record, valid: true, saved: true })), learningCycles: state.learningCycles, lessonEvaluations: state.lessonEvaluations, completedPieces: state.completedPieces, concertRecords: state.concerts, vacationPeriods: state.vacationPeriods } }
   const applyProgression = () => { const input = progressionInput(); const result = evaluateStageProgression(input); const snapshot = createStageEntrySnapshot(result, input, state.stageEntrySnapshots, makeId('stage_entry')); if (snapshot) { state.stageEntrySnapshots.push(snapshot); state.treeState.stage = Math.max(state.treeState.stage, snapshot.newStage) } return { result, snapshot } }
@@ -318,13 +340,13 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     },
     subscribeToPersistence: (listener: (json: string) => void) => { persistenceListeners.add(listener); return () => { persistenceListeners.delete(listener) } },
     // Hydrate an already validated complete snapshot without emitting a local mutation.
-    loadSnapshot: (json: string) => { const validated = parseBackup(json); assertPunishmentActivationCompatible(validated); const snapshot = { ...JSON.parse(json), leafRewardConfig: validated.leafRewardConfig, leafPunishment: validated.leafPunishment } as PersistedState; writeStorage(STORAGE_KEY, JSON.stringify(snapshot)); state = snapshot; loadWarning = null },
+    loadSnapshot: (json: string) => { const validated = parseBackup(json); assertPunishmentActivationCompatible(validated); const snapshot = { ...JSON.parse(json), leafRewardConfig: validated.leafRewardConfig, creatureCollection: validated.creatureCollection, leafPunishment: validated.leafPunishment } as PersistedState; writeStorage(STORAGE_KEY, JSON.stringify(snapshot)); state = snapshot; loadWarning = null },
     getLeafRewardConfig: () => clone(state.leafRewardConfig),
     updateLeafRewardConfig: (values: Partial<LeafRewardConfig>) => {
       const config = normalizeLeafRewardConfig({ ...state.leafRewardConfig, ...values })
       const next = { ...state, leafRewardConfig: config }
       const json = JSON.stringify(next)
-      // A settings save cannot award, revoke, or reconcile anything.
+      // A settings save cannot award, revoke, reconcile, or unlock anything.
       writeStorage(STORAGE_KEY, json)
       state = next
       notifyPersistence(json)
@@ -334,6 +356,10 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     exportPracticeCsv: () => ['date,minutes,quality,achievements,improvement,parent note', ...[...state.practiceRecords].sort(comparePracticeRecords).map((record) => [record.date, record.minutes, record.quality, record.achievements.join('; '), record.improvement, record.parentNote].map(csvCell).join(','))].join('\r\n'),
     validateBackupJson: (json: string) => { parseBackup(json); return true },
     restoreBackupJson: (json: string) => { const restored = clone(parseBackup(json)); assertPunishmentActivationCompatible(restored); const previous = state; state = restored; try { syncStats(); syncRewardReminders(); persist() } catch (error) { state = previous; throw error }; loadWarning = null; return clone(state) },
+    sendCreatureHome: (id: CreatureId) => saveCreatureVisit(sendCreatureHome(state.creatureCollection, id)),
+    showCreatureOnTree: (id: CreatureId) => saveCreatureVisit(showCreatureOnTree(state.creatureCollection, id)),
+    getCreatureCollection: () => clone(state.creatureCollection),
+    getCreatureProgress: () => selectCreatureProgress(state.creatureCollection, permanentLeafCount(state)),
     getChildProfile: () => clone(state.childProfile), getPracticeRecords: () => clone(state.practiceRecords).sort((left, right) => comparePracticeRecords(right, left)), getTreeState: () => clone(state.treeState), getHomeworkItems: () => clone(state.homeworkItems), getTeacherEvaluations: () => clone(state.teacherEvaluations), getLessonEvaluations: () => clone(state.lessonEvaluations), getCompletedPieces: () => clone(state.completedPieces), getConcerts: () => clone(state.concerts), getRewards: () => clone(state.rewards), getRewardProgress: () => clone(state.rewardProgress), getSpecialFruits: () => clone(state.specialFruits), getStageEntrySnapshots: () => clone(state.stageEntrySnapshots), getLearningCycles: () => clone(state.learningCycles), getRewardReminders: () => clone(state.rewardReminders), getVacationPeriods: () => clone(state.vacationPeriods), getRootAwards: () => clone(state.rootAwards), getParentRewards: () => clone(state.parentRewards), getLeafGrowthEvents: () => clone(state.leafGrowthEvents), getLeafState: (date = today()) => clone(currentLeafState(date)), getDailyWater: (date = today(), childId = state.childProfile.id) => selectDailyWater(state.practiceRecords, childId, date), getCurrentHealth: (date = today()) => currentHealth(date), getHealthReplay: (date = today()) => clone(replayHealth({ practiceRecords: state.practiceRecords, lessonEvaluations: state.lessonEvaluations, currentDate: date, vacationPeriods: state.vacationPeriods })), getCurrentStageProgression: () => clone(evaluateStageProgression(progressionInput())),
     grantParentReward: (title: string, fruitType: RewardFruitType) => { const trimmedTitle = title.trim(); if (!trimmedTitle) throw new Error('Enter reward content.'); if (!isRewardFruitType(fruitType)) throw new Error('Choose a supported reward fruit.'); const reward: ParentReward = { id: makeId('parent_reward'), childId: state.childProfile.id, title: trimmedTitle, fruitType, status: 'available', grantedAt: now(), fruitSlotId: selectRewardFruitSlot(state.parentRewards) }; state.parentRewards.unshift(reward); persist(); return clone(reward) },
     claimParentReward: (id: string) => { const reward = state.parentRewards.find((item) => item.id === id); if (!reward) return null; if (reward.status === 'available') { reward.status = 'claimed'; reward.claimedAt = now(); persist() } return clone(reward) },

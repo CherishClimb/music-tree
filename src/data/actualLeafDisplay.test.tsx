@@ -23,7 +23,7 @@ function setup(leaves = 16) {
     setItem: vi.fn((key: string, value: string) => { values.set(key, value) }),
     removeItem: (key: string) => { values.delete(key) },
   }
-  const repository = createLocalRepository(storage, 'UTC')
+  const repository = createLocalRepository(storage, 'UTC', () => 0)
   injected.repository = repository
   return { repository, storage }
 }
@@ -156,7 +156,7 @@ describe('actual remaining leaf display', () => {
     }
   })
 
-  it('keeps rewards based on lifetime earnings after deductions', () => {
+  it('keeps rewards and creature unlocks based on lifetime earnings after deductions', () => {
     const { repository, storage } = setup(29)
     repository.activateLeafPunishment()
     clock('2026-10-05')
@@ -164,11 +164,16 @@ describe('actual remaining leaf display', () => {
     repository.savePracticeRecord(practice('2026-10-05', 20))
     expect(repository.getLeafState()).toMatchObject({ earnedLeafCount: 30, visibleLeafCount: 25 })
     expect(repository.getRewardReminders()).toContainEqual(expect.objectContaining({ leafMilestone: 30 }))
+    expect(repository.getCreatureCollection().ownedCreatures).toHaveLength(1)
+    const creatures = repository.getCreatureCollection()
+    const progress = repository.getCreatureProgress()
     const reminders = repository.getRewardReminders()
     clock('2026-10-09')
     repository.reconcileLeafPunishment()
     const reloaded = createLocalRepository(storage, 'UTC')
     expect(reloaded.getLeafState()).toMatchObject({ earnedLeafCount: 30, visibleLeafCount: 20 })
+    expect(reloaded.getCreatureCollection()).toEqual(creatures)
+    expect(reloaded.getCreatureProgress()).toEqual(progress)
     expect(reloaded.getRewardReminders()).toEqual(reminders)
   })
 

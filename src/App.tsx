@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import './App.css'
+import { MusicFriends } from './components/creatures/MusicFriends'
 import { MusicTree } from './components/tree/MusicTree'
 import { localRepository } from './data/localRepository'
 import { startLeafPunishmentLifecycle } from './data/leafPunishmentLifecycle'
@@ -287,9 +288,9 @@ function App() {
             )}
           </div>}
 
-          <button type="button" className="tree-fruit-button" onClick={openFruit} aria-label="Open special fruit mystery reward">
+          <MusicFriends><button type="button" className="tree-fruit-button" onClick={openFruit} aria-label="Open special fruit mystery reward">
             <MusicTree treeState={visibleTreeState} stage={effectiveStage} developerPreview={developerToolsAvailable && developerPreviewEnabled} />
-          </button>
+          </button></MusicFriends>
           <div className="tree-stats">
             <span>Stage {effectiveStage}</span>
             <span>{TREE_STAGE_BLUEPRINTS[effectiveStage].name}</span>

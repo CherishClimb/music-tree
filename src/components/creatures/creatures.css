@@ -1,0 +1,44 @@
+.music-friends { position: relative; width: 100%; min-width: 0; text-align: center; }
+.music-friends-world { position: relative; isolation: isolate; }
+.creature-visitor { position: absolute; z-index: 3; top: 60%; width: clamp(66px, 21%, 128px); display: grid; justify-items: center; }
+.creature-slot-left { left: 0; }
+.creature-slot-right { right: 0; }
+.creature-illustration { display: block; width: 100%; height: auto; object-fit: contain; user-select: none; }
+.creature-arrival::before { content: ''; position: absolute; inset: 3% -3% 18%; z-index: -1; border-radius: 50%; background: radial-gradient(circle, #fffaf6c9, #dce9fc61 55%, transparent 72%); }
+.music-friends button { font: inherit; cursor: pointer; }
+.music-friends button:focus-visible { outline: 3px solid #8276ac; outline-offset: 3px; }
+.music-friends button:disabled { opacity: .5; cursor: default; }
+.creature-home-action { padding: 5px 9px; font-size: .72rem !important; min-height: 30px; border: 1px solid #ffffffc7; border-radius: 16px; background: #f8f5ffed; color: #56567e; box-shadow: 0 2px 8px #7470a017; }
+.creature-welcome { display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 370px; margin: 6px auto 12px; padding: 12px 16px; border-radius: 22px; border: 1px solid #ffffffce; background: linear-gradient(125deg, #f1faffeb, #fff0f8b5); color: #536188; text-align: left; }
+.creature-welcome-star { font-size: 2rem; color: #ac91c4; }
+.creature-welcome div { display: grid; gap: 3px; }
+.creature-eyebrow { font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; }
+.creature-welcome strong { font-size: 1.03rem; }
+.creature-welcome div > span:last-child { font-size: .78rem; line-height: 1.4; }
+.music-friends-toggle { display: inline-flex; gap: 9px; align-items: center; padding: 9px 16px; min-height: 44px; margin: 8px auto 12px; border-radius: 24px; border: 1px solid #fff; color: #566187; background: #f7f3ffe8; box-shadow: 0 4px 16px #6663930b; }
+.creature-count { font-size: .75rem; padding: 3px 7px; border-radius: 12px; background: #e6e7f88f; }
+.creature-home { padding: 18px 12px; border-radius: 24px; border: 1px solid #ffffffe6; background: linear-gradient(155deg, #f6fbfff0, #f9f2fcf0); margin: 0 0 18px; color: #566187; }
+.creature-home-heading h2 { margin: 0; font-size: 1.15rem; }
+.creature-home-heading p, .creature-capacity { font-size: .8rem; line-height: 1.5; margin: 6px 0 14px; }
+.creature-home-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.creature-home-card { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 8px 6px 12px; border-radius: 18px; background: #ffffff82; border: 1px solid #fff; }
+.creature-home-card .creature-illustration { width: min(100%, 115px); }
+.creature-home-card h3 { margin: 0; font-size: .83rem; line-height: 1.35; }
+.creature-home-card p { font-size: .7rem; margin: 5px 0 10px; line-height: 1.4; }
+.creature-home-card button { margin-top: auto; padding: 8px 9px; border: 1px solid #e0deef; border-radius: 14px; background: #f6f4ff; color: #58628b; font-size: .72rem; min-height: 38px; }
+.creature-locked .creature-illustration { filter: grayscale(1); opacity: .24; }
+.creature-locked-label { margin-top: auto; font-size: .72rem; color: #74758c; padding: 8px; }
+.creature-capacity { margin: 12px 0 0; }
+.creature-error { color: #95375a; font-size: .8rem; }
+.creature-idle { animation: friend-hover 5s ease-in-out infinite; transform-origin: 50% 70%; }
+.creature-tempo-squirrel.creature-idle { animation: friend-tap 4s ease-in-out infinite; }
+.creature-melody-moth.creature-idle { animation: friend-flutter 3s ease-in-out infinite; }
+.creature-humming-bunny.creature-idle { animation: friend-breathe 5s ease-in-out infinite; }
+.creature-rhythm-sprite.creature-idle { animation: friend-sway 4s ease-in-out infinite; }
+@keyframes friend-hover { 50% { transform: translateY(-4px) rotate(1deg); } }
+@keyframes friend-tap { 75% { transform: rotate(0); } 82%, 94% { transform: rotate(-2deg) translateY(-1px); } 88% { transform: rotate(1deg); } }
+@keyframes friend-flutter { 50% { transform: translateY(-3px) scaleX(.95); } }
+@keyframes friend-breathe { 50% { transform: scale(1.025); } }
+@keyframes friend-sway { 50% { transform: translateY(-3px) rotate(-3deg); } }
+@media (max-width: 500px) { .creature-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .creature-visitor { top: 57%; } .creature-home-action { min-height: 36px; } }
+@media (prefers-reduced-motion: reduce) { .creature-idle { animation: none; } }

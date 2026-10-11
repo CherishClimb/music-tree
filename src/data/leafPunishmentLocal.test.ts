@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDemoState, createFreshState, createLocalRepository, STORAGE_KEY, type PersistedState } from './localRepository'
+import { createCreatureCollection, unlockEarnedCreatures } from '../domain/creatures/creatureCollection'
 
 class MemoryStorage {
   values = new Map<string, string>()
@@ -34,7 +35,7 @@ describe('Phase 2B.1 local persistence boundary', () => {
     expect(reloaded.reconcileLeafPunishment().events).toEqual([])
   })
 
-  it('preserves populated growth history, health, stages and reminders exactly', () => {
+  it('preserves populated growth history, health, stages, reminders and creatures exactly', () => {
     const saved = createDemoState()
     saved.leafGrowthEvents = Array.from({ length: 20 }, (_, index) => ({
       id: `leaf_${index}`, childId: saved.childProfile.id, date: `2026-09-${String(index + 1).padStart(2, '0')}`,
@@ -44,9 +45,13 @@ describe('Phase 2B.1 local persistence boundary', () => {
     saved.rootAwards = [{ lessonEvaluationId: 'lesson', completedCycle: true, completedPieceCategory: true, bigImprovement: true, points: 3, createdAt: '2026-09-30' }]
     saved.stageEntrySnapshots = [{ id: 'stage', previousStage: 2, newStage: 3, stageEntryDate: '2026-09-30', qualifyingEventIds: ['lesson'], cumulativeTotals: { practiceDays: 40, learningCycles: 9, completedPieces: 18 }, stageCounters: { practiceDays: 0 }, permanentStage: 3 }]
     saved.rewardReminders = [{ id: 'reminder', childId: saved.childProfile.id, leafMilestone: 35, status: 'pending', createdAt: '2026-09-30T12:00:00Z' }]
+    // One owned creature and enough lifetime leaves for another: punishment
+    // must neither remove the owned creature nor run the ordinary unlock hook.
+    saved.creatureCollection = unlockEarnedCreatures(createCreatureCollection(), 30, '2026-09-30T12:00:00Z', () => 0)
     const storage = new MemoryStorage()
     storage.setItem(STORAGE_KEY, JSON.stringify(saved))
-    const repository = createLocalRepository(storage, 'UTC')
+    const random = vi.fn(() => 0)
+    const repository = createLocalRepository(storage, 'UTC', random)
     const before = JSON.parse(repository.exportBackupJson())
     repository.activateLeafPunishment()
     clock('2026-10-11T12:00:00Z')
@@ -59,9 +64,11 @@ describe('Phase 2B.1 local persistence boundary', () => {
     expect(repository.getHealthReplay()).toEqual(health)
     expect(repository.getLeafState()).toEqual({ ...leaves, visibleLeafCount: 21 })
     expect(repository.getCurrentStageProgression()).toEqual(progression)
-    const reloaded = createLocalRepository(storage, 'UTC')
+    expect(random).not.toHaveBeenCalled()
+    const reloaded = createLocalRepository(storage, 'UTC', random)
     expect(reloaded.reconcileLeafPunishment()).toEqual(ledger)
     expect(reloaded.getLeafGrowthEvents()).toEqual(saved.leafGrowthEvents)
+    expect(reloaded.getCreatureCollection()).toEqual(saved.creatureCollection)
   })
 
   it('reconciles at the practice write while selectors stay read-only and defensive', () => {

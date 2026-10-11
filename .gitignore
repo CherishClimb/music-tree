@@ -11,7 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
-artifacts/
+artifacts/*
+!artifacts/creatures/
+artifacts/creatures/*
+!artifacts/creatures/current/
+!artifacts/creatures/reference/
+!artifacts/creatures/README.md
 
 # Editor directories and files
 .vscode/*

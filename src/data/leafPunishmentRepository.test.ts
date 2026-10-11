@@ -281,6 +281,7 @@ describe('explicit persisted leaf punishment', () => {
     expect(active.getRootAwards()).toEqual(control.getRootAwards())
     expect(active.getStageEntrySnapshots()).toEqual(control.getStageEntrySnapshots())
     expect(active.getRewardReminders()).toEqual(control.getRewardReminders())
+    expect(active.getCreatureCollection()).toEqual(control.getCreatureCollection())
   })
 
   it('keeps the existing invalid-JSON reload recovery while inactive', () => {

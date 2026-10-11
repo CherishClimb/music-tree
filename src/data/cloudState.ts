@@ -48,7 +48,7 @@ export function validateCloudState(value: unknown): PersistedState {
     }
     return typeof actual === typeof template && (typeof actual !== 'number' || Number.isFinite(actual))
   }
-  const { initialLeafBaselineVersion: _baseline, leafPunishment: _punishment, leafRewardConfig: _leafRewardConfig, ...required } = fresh
+  const { initialLeafBaselineVersion: _baseline, creatureCollection: _creatures, leafPunishment: _punishment, leafRewardConfig: _leafRewardConfig, ...required } = fresh
   // Older snapshots have no settings; parseBackup validates supplied values.
   void _leafRewardConfig
   // Missing means inactive, never a newly inferred activation date. parseBackup
@@ -56,6 +56,8 @@ export function validateCloudState(value: unknown): PersistedState {
   void _punishment
   // This optional migration marker is metadata, not a reason to reject an older snapshot.
   void _baseline
+  // Old snapshots predate creatures; parseBackup validates the collection when present.
+  void _creatures
   const template = {
     ...required, ...recordTemplates,
     treeState: { ...required.treeState, unlockedDecorations: [''], unlockedCreatures: [''], completedPieces: [''] },
@@ -80,6 +82,8 @@ export function isMeaningfulLocalState(state: PersistedState): boolean {
     }
     delete copy.initialLeafBaselineVersion
     if (!copy.leafPunishment) delete (copy as Partial<PersistedState>).leafPunishment
+    // An empty collection's migration baseline is not user activity.
+    if (!copy.creatureCollection?.ownedCreatures.length) delete (copy as Partial<PersistedState>).creatureCollection
     return copy
   }
   return canonicalJson(comparable(state)) !== canonicalJson(comparable(createFreshState()))

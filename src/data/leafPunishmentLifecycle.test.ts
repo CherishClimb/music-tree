@@ -14,9 +14,10 @@ const stops: (() => void)[] = []
 const setup = (timeZone = 'UTC', initial = createFreshState()) => {
   const storage = new MemoryStorage()
   storage.setItem(STORAGE_KEY, JSON.stringify(initial))
-  const repository = createLocalRepository(storage, timeZone)
+  const random = vi.fn(() => 0)
+  const repository = createLocalRepository(storage, timeZone, random)
   storage.setItem.mockClear()
-  return { repository, storage }
+  return { repository, storage, random }
 }
 const start = (repository: ReturnType<typeof createLocalRepository>, onError = vi.fn()) => {
   const stop = startLeafPunishmentLifecycle(repository, onError)
@@ -161,8 +162,8 @@ describe('punishment app lifecycle', () => {
     expect(reloaded.getLeafPunishmentBalance().availableLeafCount).toBe(3)
   })
 
-  it('changes only the ledger, preserving saved growth, health and rewards', () => {
-    const { repository } = setup('UTC', createDemoState())
+  it('changes only the ledger, preserving saved growth, health, rewards and creatures', () => {
+    const { repository, random } = setup('UTC', createDemoState())
     const before = JSON.parse(repository.exportBackupJson())
     start(repository)
     clock('2026-11-01T12:00:00Z')
@@ -171,6 +172,7 @@ describe('punishment app lifecycle', () => {
     expect(repository.getLeafPunishmentBalance().availableLeafCount).toBe(0)
     expect(JSON.parse(repository.exportBackupJson())).toEqual({ ...before, leafPunishment: repository.getLeafPunishmentLedger() })
     expect(repository.getHealthReplay()).toEqual(health)
+    expect(random).not.toHaveBeenCalled()
   })
 
   it.each(['activation', 'reconciliation'])('retries failed %s on same-day focus without losing history', (operation) => {
