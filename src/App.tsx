@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import './App.css'
 import { MusicFriends } from './components/creatures/MusicFriends'
 import { MusicTree } from './components/tree/MusicTree'
 import { localRepository } from './data/localRepository'
 import { startLeafPunishmentLifecycle } from './data/leafPunishmentLifecycle'
 import { createInitialTreeState } from './domain/treeGrowthEngine'
-import { getPermissionsForRole, MVP_ROLE_NOTE } from './domain/permissions'
+import { getPermissionsForRole } from './domain/permissions'
 import { chooseRandomReward, type FamilyReward, type SpecialFruit } from './domain/specialFruitEngine'
 import { TREE_STAGE_BLUEPRINTS, type TreeStage } from './domain/treeStageBlueprints'
 import type { AppRole, HomeworkItem, HomeworkItemType, PracticeRecord, TreeState } from './domain/types'
@@ -35,6 +35,9 @@ const roleLabel: Record<AppRole, string> = {
 }
 
 const defaultRewardName = 'Choose the family movie'
+const showParentRewardReminder = false
+// Temporarily hidden while the fruit reward experience is redesigned.
+const showSpecialFruitCard = false
 const punishmentSnapshot = () => JSON.stringify(localRepository.getLeafPunishmentLedger())
 
 function App() {
@@ -80,17 +83,43 @@ function App() {
   const [rewardReminders, setRewardReminders] = useState(() => localRepository.getRewardReminders())
   const [dismissedReminderIds, setDismissedReminderIds] = useState<string[]>([])
   const [leafRewardConfig, setLeafRewardConfig] = useState(() => localRepository.getLeafRewardConfig())
-  const [leafRewardSettingsOpen, setLeafRewardSettingsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsButtonRef = useRef<HTMLButtonElement>(null)
+  const settingsDialogRef = useRef<HTMLDialogElement>(null)
+  const settingsCloseButtonRef = useRef<HTMLButtonElement>(null)
+  const settingsWasOpen = useRef(false)
 
   useEffect(() => startLeafPunishmentLifecycle(localRepository,
     (error) => setRepositoryWarning(error ?? localRepository.getLoadWarning())), [])
+
+  useEffect(() => {
+    const dialog = settingsDialogRef.current
+    if (!dialog) return
+
+    if (settingsOpen) {
+      settingsWasOpen.current = true
+      if (!dialog.open) {
+        if (typeof dialog.showModal === 'function') dialog.showModal()
+        else dialog.setAttribute('open', '')
+      }
+      settingsCloseButtonRef.current?.focus()
+      return
+    }
+
+    if (dialog.open) {
+      if (typeof dialog.close === 'function') dialog.close()
+      else dialog.removeAttribute('open')
+    }
+    if (settingsWasOpen.current) {
+      settingsWasOpen.current = false
+      settingsButtonRef.current?.focus()
+    }
+  }, [settingsOpen])
 
   const permissions = useMemo(() => getPermissionsForRole(role), [role])
   const developerToolsAvailable = import.meta.env.DEV
   const effectiveStage = selectDeveloperPreviewStage(treeState.stage as TreeStage, previewStage, developerToolsAvailable && developerPreviewEnabled)
   const currentLocalDate = localCalendarDate()
-  const todayWater = selectDailyWater(records, childProfile.id, currentLocalDate)
-  const currentHealth = localRepository.getCurrentHealth(currentLocalDate)
   const currentLeafState: LeafState = localRepository.getLeafState(currentLocalDate)
   const visibleTreeState = { ...treeState, leafCount: currentLeafState.visibleLeafCount }
   const selectedDateWater = selectDailyWater(records, childProfile.id, practiceDate)
@@ -266,11 +295,13 @@ function App() {
           <div className="tree-header parent-view-header">
             <span className="badge">{roleLabel[role]} view</span>
             <button
+              ref={settingsButtonRef}
               type="button"
               className="mini-button parent-settings-toggle"
-              aria-expanded={leafRewardSettingsOpen}
-              aria-controls="leaf-reward-settings-panel"
-              onClick={() => setLeafRewardSettingsOpen((open) => !open)}
+              aria-expanded={settingsOpen}
+              aria-haspopup="dialog"
+              aria-controls="parent-settings-dialog"
+              onClick={() => setSettingsOpen(true)}
             >
               <span className="parent-settings-icon" aria-hidden="true">⚙</span>
               Settings
@@ -383,9 +414,33 @@ function App() {
           )}
 
           {role === 'parent' && (
-            <div id="leaf-reward-settings-panel" className="parent-settings-panel" hidden={!leafRewardSettingsOpen}>
-              <LeafRewardSettings value={leafRewardConfig} onSave={saveLeafRewardConfig} />
-            </div>
+            <dialog
+              ref={settingsDialogRef}
+              id="parent-settings-dialog"
+              className="parent-settings-dialog"
+              aria-labelledby="parent-settings-title"
+              onCancel={(event) => { event.preventDefault(); setSettingsOpen(false) }}
+              onClose={() => { if (settingsOpen) setSettingsOpen(false) }}
+              onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); setSettingsOpen(false) } }}
+            >
+              <div className="parent-settings-dialog-header">
+                <h2 id="parent-settings-title">Settings</h2>
+                <button ref={settingsCloseButtonRef} type="button" className="mini-button" onClick={() => setSettingsOpen(false)}>Close</button>
+              </div>
+              <div className="parent-settings-dialog-content">
+                <div className="card form-card child-profile-editor" data-settings-section="child-profile">
+                  <h2>Child Profile</h2>
+                  <label>Display name<input maxLength={40} value={profileName} onChange={(event) => setProfileName(event.target.value)} /></label>
+                  <fieldset><legend>Choose an avatar</legend><div className="avatar-options">{CHILD_AVATARS.map((avatar) => <button key={avatar.id} type="button" className={profileAvatar === avatar.id ? 'avatar-option selected' : 'avatar-option'} aria-label={`Choose ${avatar.label} avatar`} aria-pressed={profileAvatar === avatar.id} onClick={() => setProfileAvatar(avatar.id)}><AvatarIllustration avatarId={avatar.id} /><small>{avatar.label}</small>{profileAvatar === avatar.id && <strong className="avatar-selected-label">Selected</strong>}</button>)}</div></fieldset>
+                  <button type="button" className="primary-button" onClick={saveChildProfile}>Save child profile</button>
+                  {profileMessage && <p className="data-tool-message" role="status">{profileMessage}</p>}
+                  <small>Current profile: {childProfile.displayName}</small>
+                </div>
+                <ParentDataTools onRestored={refreshPersistedView} />
+                <LeafRewardSettings value={leafRewardConfig} onSave={saveLeafRewardConfig} />
+                <div data-parent-section="vacation"><VacationManager /></div>
+              </div>
+            </dialog>
           )}
 
           {role === 'parent' && (
@@ -452,7 +507,7 @@ function App() {
           </div>
 
           <ParentStageProgress />
-          {pendingRewardReminder && <section className="card reward-reminder-card" aria-labelledby="reward-reminder-title">
+          {showParentRewardReminder && pendingRewardReminder && <section className="card reward-reminder-card" aria-labelledby="reward-reminder-title">
             <h2 id="reward-reminder-title">A little celebration?</h2>
             <p>{pendingRewardReminder.leafMilestone === 5 ? `${childProfile.displayName} has grown 5 more leaves. Would you like to add a little reward fruit?` : `${childProfile.displayName}’s tree has reached ${pendingRewardReminder.leafMilestone} leaves. Would you like to add a reward fruit?`}</p>
             <div className="reward-reminder-actions">
@@ -462,34 +517,12 @@ function App() {
             </div>
           </section>}
           {repositoryWarning && role === 'parent' && <div className="card notice parent-secondary-section" role="alert"><h2>Saved data notice</h2><p>{repositoryWarning}</p></div>}
-          <div className="card parent-secondary-section">
-            <h2>Today’s tree status</h2>
-            <ul>
-              <li>Water today: {todayWater}/3</li>
-              <li>Roots: {treeState.rootStrength}</li>
-              <li>Health today: {currentHealth}%</li>
-            </ul>
-          </div>
 
-          {role === 'parent' && (
-            <div className="card form-card child-profile-editor parent-secondary-section">
-              <h2>Child profile</h2>
-              <label>Display name<input maxLength={40} value={profileName} onChange={(event) => setProfileName(event.target.value)} /></label>
-              <fieldset><legend>Choose an avatar</legend><div className="avatar-options">{CHILD_AVATARS.map((avatar) => <button key={avatar.id} type="button" className={profileAvatar === avatar.id ? 'avatar-option selected' : 'avatar-option'} aria-label={`Choose ${avatar.label} avatar`} aria-pressed={profileAvatar === avatar.id} onClick={() => setProfileAvatar(avatar.id)}><AvatarIllustration avatarId={avatar.id} /><small>{avatar.label}</small>{profileAvatar === avatar.id && <strong className="avatar-selected-label">Selected</strong>}</button>)}</div></fieldset>
-              <button type="button" className="primary-button" onClick={saveChildProfile}>Save child profile</button>
-              {profileMessage && <p className="data-tool-message" role="status">{profileMessage}</p>}
-              <small>Current profile: {childProfile.displayName}</small>
-            </div>
-          )}
-
-          {role === 'parent' && <div className="parent-secondary-section" data-parent-section="data-tools"><ParentDataTools onRestored={refreshPersistedView} /></div>}
-          {role === 'parent' && <div className="parent-secondary-section" data-parent-section="vacation"><VacationManager /></div>}
-
-          <div className="card parent-secondary-section">
+          {showSpecialFruitCard && <div className="card parent-secondary-section">
             <h2>Special fruit</h2>
             <p className="reward-reveal">{openedRewardName ?? `Your next magical fruit is growing.`}</p>
             <p className="reward-reveal">{activeFruitReward}</p>
-          </div>
+          </div>}
 
           <div className="card parent-secondary-section">
             <h2>Recent practice</h2>
@@ -503,10 +536,6 @@ function App() {
             </ul>
           </div>
 
-          <div className="card notice parent-secondary-section">
-            <h2>Role note</h2>
-            <p>{MVP_ROLE_NOTE}</p>
-          </div>
         </aside>
       </main>}
     </div>

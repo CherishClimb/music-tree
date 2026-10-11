@@ -34,8 +34,8 @@ export function ParentDataTools({ onRestored }: { onRestored: () => void }) {
   }
 
   return (
-    <div className="card parent-data-tools">
-      <h2>My Music Tree data</h2>
+    <section className="card parent-data-tools" data-parent-section="data-tools" aria-labelledby="data-backup-title">
+      <h2 id="data-backup-title">Data &amp; Backup</h2>
       <p>Download a private backup or practice-history file to this device.</p>
       <div className="data-tool-actions">
         <button type="button" className="mini-button" onClick={() => downloadText(localRepository.exportBackupJson(), `music-tree-backup-${date}.json`, 'application/json')}>Export complete backup</button>
@@ -44,6 +44,6 @@ export function ParentDataTools({ onRestored }: { onRestored: () => void }) {
       </div>
       <small>Files stay on this device. CSV import is not supported.</small>
       {message && <p className="data-tool-message" role="status">{message}</p>}
-    </div>
+    </section>
   )
 }

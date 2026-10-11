@@ -94,7 +94,8 @@ describe('cloud setup UI after authentication', () => {
     expect(screen.getByRole('button', { name: 'Export local backup' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Reload latest version' }))
     expect(await screen.findByRole('button', { name: 'Edit Music Tree' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Export previous local copy' })).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Cloud saving' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Export previous local copy' })).toBeNull()
   })
   it('keeps valid local data and offers retry when the cloud load fails', async () => {
     const h = setup(true)

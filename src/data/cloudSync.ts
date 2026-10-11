@@ -84,7 +84,6 @@ export function createCloudSync({
     if (!keepLocal) {
       const previousCopy = preserveLocalCopy(storage, json)
       safetyCopy = previousCopy ?? safetyCopy
-      if (previousCopy && !message) message = 'Loaded the cloud Music Tree. A safety copy of the previous local data is available to export.'
       repository.loadSnapshot(json)
     }
     storage.setItem(CLOUD_CACHE_OWNER_KEY, userId)

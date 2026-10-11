@@ -53,6 +53,8 @@ describe('safe cloud bootstrap and local-first synchronization', () => {
     expect(JSON.parse(h.storage.getItem(STORAGE_KEY)!)).toEqual(remote)
     expect(JSON.parse(h.repository.exportBackupJson())).toEqual(remote)
     expect(h.storage.getItem(h.storage.getItem(LAST_SAFETY_COPY_KEY)!)).toBe(before)
+    expect(h.sync.getView().safetyCopy).toBe(before)
+    expect(h.sync.getView().message).toBe('')
     expect(h.cloud.updateCloudState).not.toHaveBeenCalled()
     expect(h.cloud.createCloudState).not.toHaveBeenCalled()
   })
@@ -125,9 +127,10 @@ describe('safe cloud bootstrap and local-first synchronization', () => {
     await settle()
     expect(h.cloud.updateCloudState).toHaveBeenLastCalledWith(tree.id, JSON.parse(h.repository.exportBackupJson()), initialRevision)
     const nextRevision = (await h.cloud.updateCloudState.mock.results[0].value).updated_at
-    h.repository.updateChildProfile({ displayName: 'New name', avatarId: 'ice_princess' })
+    h.repository.updateChildProfile({ displayName: 'New name', avatarId: 'rainbow_unicorn' })
     await settle()
     expect(h.cloud.updateCloudState).toHaveBeenLastCalledWith(tree.id, JSON.parse(h.repository.exportBackupJson()), nextRevision)
+    expect(JSON.parse(h.repository.exportBackupJson()).childProfile.avatarId).toBe('rainbow_unicorn')
     expect(h.sync.getView().saveStatus).toBe('saved')
   })
   it('keeps existing backup import/export working and syncs an explicit import', async () => {

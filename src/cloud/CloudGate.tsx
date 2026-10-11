@@ -70,11 +70,10 @@ export function CloudGate({
 
   if (view.phase === 'loading') return <main className="cloud-loading"><p role="status">Loading your cloud Music Tree...</p></main>
   if (view.phase === 'ready') return <>
-    <section className="cloud-status" aria-label="Cloud saving">
-      <p role="status">{view.saveStatus === 'saving' ? 'Saving to cloud...' : view.saveStatus === 'offline' ? view.message : view.message || 'Saved to cloud'}</p>
+    {view.saveStatus !== 'saved' && <section className="cloud-status" aria-label="Cloud saving">
+      <p role={view.saveStatus === 'offline' ? 'alert' : 'status'}>{view.saveStatus === 'saving' ? 'Saving to cloud...' : view.message}</p>
       {view.saveStatus === 'offline' && <button type="button" onClick={() => void controller.current?.retry()}>Retry cloud save</button>}
-      {safetyBackup}
-    </section>
+    </section>}
     {children}
   </>
 

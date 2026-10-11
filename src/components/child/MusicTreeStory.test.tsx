@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createInitialTreeState } from '../../domain/treeGrowthEngine'
@@ -26,6 +26,53 @@ const renderChildPage = () => render(
 )
 
 describe('Music Tree story', () => {
+  it('uses native modality and handles the browser cancel event', async () => {
+    const originalShowModal = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal')
+    const originalClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close')
+    const showModal = vi.fn(function (this: HTMLDialogElement) { this.setAttribute('open', '') })
+    const close = vi.fn(function (this: HTMLDialogElement) { this.removeAttribute('open') })
+    // jsdom does not implement the browser dialog methods.
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: showModal })
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: close })
+    try {
+      const user = userEvent.setup()
+      renderChildPage()
+      const openButton = screen.getByRole('button', { name: /Story/ })
+      openButton.focus()
+      await user.keyboard('{Enter}')
+      const dialog = screen.getByRole('dialog', { name: 'The Secret of the Music Tree' })
+      expect(dialog).toBeInstanceOf(HTMLDialogElement)
+      expect(showModal).toHaveBeenCalledOnce()
+      fireEvent(dialog, new Event('cancel', { cancelable: true }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(close).toHaveBeenCalledOnce()
+      expect(document.activeElement).toBe(openButton)
+    } finally {
+      cleanup()
+      if (originalShowModal) Object.defineProperty(HTMLDialogElement.prototype, 'showModal', originalShowModal)
+      else Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal')
+      if (originalClose) Object.defineProperty(HTMLDialogElement.prototype, 'close', originalClose)
+      else Reflect.deleteProperty(HTMLDialogElement.prototype, 'close')
+    }
+  })
+
+  it('only dismisses pointer clicks on the backdrop and restores scrolling on unmount', async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderChildPage()
+    const previousOverflow = document.body.style.overflow
+    const openButton = screen.getByRole('button', { name: /Story/ })
+    await user.click(openButton)
+    await user.click(screen.getByText(englishParagraphs[0]))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    await user.click(screen.getByRole('dialog'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(openButton)
+    expect(document.body.style.overflow).toBe(previousOverflow)
+    await user.click(openButton)
+    unmount()
+    expect(document.body.style.overflow).toBe(previousOverflow)
+  })
+
   it('opens in English with the exact approved wording and closes with its control', async () => {
     const user = userEvent.setup()
     renderChildPage()

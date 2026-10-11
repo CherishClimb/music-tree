@@ -39,7 +39,7 @@ const STORIES: Record<StoryLanguage, { title: string; paragraphs: readonly strin
       '假期里，一道温柔的魔法会保护花园，就连那个小偷也只能远远躲开。',
       '但音乐树从未失去魔力。每当音乐再次响起，它的枝条便会欢喜地摇动，准备重新生长。',
       '如果你听得非常非常仔细，也许会听见它在叶间轻声说：',
-      '“为我弹一支旋律吧，我会为你种出一个小小的梦。”',
+      '“为我奏一段旋律吧，我会为你长出一个小小的梦。”',
     ],
   },
 }
@@ -56,13 +56,18 @@ type MusicTreeStoryProps = {
 
 export function MusicTreeStory({ onClose }: MusicTreeStoryProps) {
   const [language, setLanguage] = useState<StoryLanguage>('en')
-  const dialogRef = useRef<HTMLElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const story = STORIES[language]
 
   useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const previousOverflow = document.body.style.overflow
+    // Match Parent Settings: native modality also makes the background inert.
+    if (typeof dialog.showModal === 'function') dialog.showModal()
+    else dialog.setAttribute('open', '')
     document.body.style.overflow = 'hidden'
     closeRef.current?.focus()
 
@@ -90,14 +95,16 @@ export function MusicTreeStory({ onClose }: MusicTreeStoryProps) {
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      if (typeof dialog.close === 'function') dialog.close()
+      else dialog.removeAttribute('open')
       document.body.style.overflow = previousOverflow
       previouslyFocused?.focus()
     }
   }, [onClose])
 
   return (
-    <div className="story-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-      <section ref={dialogRef} className="story-dialog" role="dialog" aria-modal="true" aria-labelledby="music-tree-story-title">
+    <dialog ref={dialogRef} className="story-overlay" aria-modal="true" aria-labelledby="music-tree-story-title" onCancel={(event) => { event.preventDefault(); onClose() }} onMouseDown={(event) => { if (event.target === event.currentTarget) { event.preventDefault(); onClose() } }}>
+      <div className="story-dialog">
         <div className="story-dialog-header">
           <span className="story-book-icon" aria-hidden="true">📖</span>
           <h2 id="music-tree-story-title" lang={language === 'zh' ? 'zh-Hans' : language}>{story.title}</h2>
@@ -113,7 +120,7 @@ export function MusicTreeStory({ onClose }: MusicTreeStoryProps) {
         <div key={language} className="story-scroll" role="region" aria-labelledby="music-tree-story-title" tabIndex={0} lang={language === 'zh' ? 'zh-Hans' : language}>
           {story.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
         </div>
-      </section>
-    </div>
+      </div>
+    </dialog>
   )
 }
