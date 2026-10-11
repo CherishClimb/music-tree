@@ -186,9 +186,29 @@ h1, h2, p, ul {
   letter-spacing: 0.08em;
 }
 
-.tree-header strong {
-  color: #1a406a;
-  font-size: 0.92rem;
+.parent-settings-toggle {
+  flex: 0 0 auto;
+  gap: 7px;
+  font-weight: 800;
+  touch-action: manipulation;
+}
+
+.parent-settings-toggle[aria-expanded='true'] {
+  background: rgba(220, 235, 255, 0.88);
+  border-color: rgba(77, 112, 165, 0.9);
+}
+
+.parent-settings-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.parent-settings-panel {
+  min-width: 0;
+}
+
+.parent-settings-panel[hidden] {
+  display: none;
 }
 
 .music-tree {
@@ -693,6 +713,11 @@ h1, h2, p, ul {
   .tree-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .tree-header.parent-view-header {
+    flex-direction: row;
+    align-items: center;
   }
 
   .music-tree {

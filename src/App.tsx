@@ -47,7 +47,7 @@ function App() {
     ...localRepository.getTreeState(),
   }))
   const [records, setRecords] = useState<PracticeRecord[]>(() => localRepository.getPracticeRecords())
-  const [message, setMessage] = useState<string>(localRepository.getTreeState().message)
+  const [, setMessage] = useState<string>(localRepository.getTreeState().message)
   const [minutes, setMinutes] = useState<number>(15)
   const [quality, setQuality] = useState<PracticeRecord['quality']>('focused')
   const [achievement, setAchievement] = useState<string>('assigned_section')
@@ -80,6 +80,7 @@ function App() {
   const [rewardReminders, setRewardReminders] = useState(() => localRepository.getRewardReminders())
   const [dismissedReminderIds, setDismissedReminderIds] = useState<string[]>([])
   const [leafRewardConfig, setLeafRewardConfig] = useState(() => localRepository.getLeafRewardConfig())
+  const [leafRewardSettingsOpen, setLeafRewardSettingsOpen] = useState(false)
 
   useEffect(() => startLeafPunishmentLifecycle(localRepository,
     (error) => setRepositoryWarning(error ?? localRepository.getLoadWarning())), [])
@@ -262,9 +263,18 @@ function App() {
 
       {role === 'child' ? <ChildPage treeState={treeState} practiceRecords={records} homeworkItems={homeworkItems} parentRewards={parentRewards} leafState={currentLeafState} onParentRewardsChange={setParentRewards} /> : role === 'teacher' ? <TeacherPage /> : <main className="layout">
         <section className="tree-panel">
-          <div className="tree-header">
+          <div className="tree-header parent-view-header">
             <span className="badge">{roleLabel[role]} view</span>
-            <strong>{message}</strong>
+            <button
+              type="button"
+              className="mini-button parent-settings-toggle"
+              aria-expanded={leafRewardSettingsOpen}
+              aria-controls="leaf-reward-settings-panel"
+              onClick={() => setLeafRewardSettingsOpen((open) => !open)}
+            >
+              <span className="parent-settings-icon" aria-hidden="true">⚙</span>
+              Settings
+            </button>
           </div>
 
           {developerToolsAvailable && <div className={developerPreviewEnabled ? 'developer-preview active' : 'developer-preview'}>
@@ -372,7 +382,11 @@ function App() {
             </div>
           )}
 
-          {role === 'parent' && <LeafRewardSettings value={leafRewardConfig} onSave={saveLeafRewardConfig} />}
+          {role === 'parent' && (
+            <div id="leaf-reward-settings-panel" className="parent-settings-panel" hidden={!leafRewardSettingsOpen}>
+              <LeafRewardSettings value={leafRewardConfig} onSave={saveLeafRewardConfig} />
+            </div>
+          )}
 
           {role === 'parent' && (
             <div className="card form-card homework-manager parent-homework-editor" data-parent-section="homework-editor">
