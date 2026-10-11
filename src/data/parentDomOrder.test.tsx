@@ -7,7 +7,7 @@ describe('Parent semantic section order', () => {
   it('renders every primary section in visual and keyboard order before Urlaub and Data Tools', () => {
     const markup = renderToStaticMarkup(<App />)
     const sectionPosition = (id: string) => markup.indexOf(`data-parent-section="${id}"`)
-    const primary = ['daily-practice', 'homework-editor', 'current-homework', 'reward-fruit', 'reward-progress'].map(sectionPosition)
+    const primary = ['daily-practice', 'leaf-rewards', 'homework-editor', 'current-homework', 'reward-fruit', 'reward-progress'].map(sectionPosition)
 
     expect(primary.every((position) => position >= 0)).toBe(true)
     expect(primary).toEqual([...primary].sort((left, right) => left - right))

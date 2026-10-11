@@ -157,13 +157,13 @@ describe('MVP2 backdated parent practice', () => {
     expect(repository.getTreeState().currentPracticeStreak).toBe(4)
   })
 
-  it('edits an activity date while preserving identity, createdAt, and permanent awards', () => {
+  it('moves unearned practice while preserving identity and audit timestamps', () => {
     const storage = new MemoryStorage()
     const repository = createLocalRepository(storage)
-    const saved = repository.savePracticeRecord(input('2026-10-01')).record
+    const saved = repository.savePracticeRecord({ ...input('2026-10-01'), minutes: 5 }).record
     const earnedBefore = repository.getLeafGrowthEvents()
     vi.setSystemTime(new Date('2026-10-04T14:00:00.000Z'))
-    const edited = repository.updatePracticeRecord(saved.id, { ...saved, date: '2026-10-03', createdAt: '2000-01-01T00:00:00.000Z' } as typeof saved)
+    const edited = repository.updatePracticeRecord(saved.id, { ...saved, minutes: 20, date: '2026-10-03', createdAt: '2000-01-01T00:00:00.000Z' } as typeof saved)
     expect(edited).toMatchObject({ id: saved.id, childId: saved.childId, date: '2026-10-03', createdAt: NOW, updatedAt: '2026-10-04T14:00:00.000Z' })
     expect(repository.getDailyWater('2026-10-01')).toBe(0)
     expect(repository.getDailyWater('2026-10-03')).toBe(3)

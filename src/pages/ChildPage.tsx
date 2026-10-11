@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { HomeworkMissionCard } from '../components/child/HomeworkMissionCard'
 import { RecentRewardCard } from '../components/child/RecentRewardCard'
 import { StageProgress } from '../components/child/StageProgress'
 import { TodayPracticeCard } from '../components/child/TodayPracticeCard'
+import { MusicTreeStory } from '../components/child/MusicTreeStory'
 import { MusicTree } from '../components/tree/MusicTree'
 import { localRepository } from '../data/localRepository'
 import { calculateStageProgress } from '../domain/childStageProgress'
@@ -37,6 +38,8 @@ export function ChildPage({ treeState: suppliedTreeState, practiceRecords, homew
   const today = localCalendarDate()
   const vacationToday = isVacationDay(today, vacationPeriods)
   const [magicMessage, setMagicMessage] = useState(() => vacationToday ? `The Music Tree is resting while ${profile.displayName} is on holiday.` : selectLatestParentNote(practice, today))
+  const [storyOpen, setStoryOpen] = useState(false)
+  const closeStory = useCallback(() => setStoryOpen(false), [])
   const leafState = suppliedLeafState ?? localRepository.getLeafState(today)
   const visualTreeState = useMemo(() => {
     const treeWithVisibleLeaves = { ...treeState, leafCount: leafState.visibleLeafCount }
@@ -75,17 +78,19 @@ export function ChildPage({ treeState: suppliedTreeState, practiceRecords, homew
       <div className="child-game-layout">
         <section className="child-tree-scene" aria-label="Your magical Music Tree">
           <div className="child-tree-glow" />
+          <button type="button" className="story-button" aria-haspopup="dialog" onClick={() => setStoryOpen(true)}><span aria-hidden="true">📖</span> Story</button>
           <MusicTree treeState={visualTreeState} stage={stage} childAvatarId={profile.avatarId} parentRewards={parentRewards} onParentRewardSelect={selectParentReward} onLeafSelect={() => setMagicMessage('A new crystal leaf is humming your song.')} onFlowerSelect={() => setMagicMessage('This flower bloomed from your careful practice.')} onFruitSelect={() => setMagicMessage('This fruit remembers a piece you completed.')} />
           <p className="tree-whisper" role="status">{magicMessage}</p>
           {unopenedFruit && <button type="button" className="surprise-fruit-button" onClick={() => setMagicMessage('A surprise fruit is waiting to be opened with your family!')}>✦ Unopened surprise fruit</button>}
         </section>
         <div className="child-side-cards">
           <HomeworkMissionCard items={homework} />
-          <TodayPracticeCard practised={todayRecords.length > 0} minutes={todayRecords.reduce((sum, record) => sum + record.minutes, 0)} water={todayWater} health={currentHealth} earnedLeaves={leafState.earnedLeafCount} visibleLeaves={leafState.visibleLeafCount} />
+          <TodayPracticeCard practised={todayRecords.length > 0} minutes={todayRecords.reduce((sum, record) => sum + record.minutes, 0)} water={todayWater} health={currentHealth} visibleLeaves={leafState.visibleLeafCount} />
           <RecentRewardCard message={treeState.message} />
           <button type="button" className="memories-button" onClick={() => setMagicMessage('Your music memories are sparkling safely in the tree.')}>✧ Visit my music memories</button>
         </div>
       </div>
+      {storyOpen && <MusicTreeStory onClose={closeStory} />}
     </main>
   )
 }

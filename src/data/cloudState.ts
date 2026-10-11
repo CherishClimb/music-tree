@@ -1,6 +1,7 @@
 import { createFreshState, parseBackup, type PersistedState } from './localRepository'
 import { isAvatarId } from '../domain/avatarOptions'
 import { TREE_STAGE_BLUEPRINTS } from '../domain/treeStageBlueprints'
+import { normalizeLeafRewardConfig } from '../domain/leafReward'
 
 // Structural checks supplement the existing backup validator for data received from
 // another device. These describe JSON shapes only; growth rules stay in the engines.
@@ -47,7 +48,12 @@ export function validateCloudState(value: unknown): PersistedState {
     }
     return typeof actual === typeof template && (typeof actual !== 'number' || Number.isFinite(actual))
   }
-  const { initialLeafBaselineVersion: _baseline, ...required } = fresh
+  const { initialLeafBaselineVersion: _baseline, leafPunishment: _punishment, leafRewardConfig: _leafRewardConfig, ...required } = fresh
+  // Older snapshots have no settings; parseBackup validates supplied values.
+  void _leafRewardConfig
+  // Missing means inactive, never a newly inferred activation date. parseBackup
+  // validates any supplied ledger; hydration installs the normalized null.
+  void _punishment
   // This optional migration marker is metadata, not a reason to reject an older snapshot.
   void _baseline
   const template = {
@@ -59,12 +65,13 @@ export function validateCloudState(value: unknown): PersistedState {
     !Object.hasOwn(TREE_STAGE_BLUEPRINTS, (value as PersistedState).treeState.stage)) {
     throw new Error('The cloud Music Tree is not a complete, valid backup. Your local copy has been kept.')
   }
-  return JSON.parse(json) as PersistedState
+  return { ...(JSON.parse(json) as PersistedState), leafRewardConfig: normalizeLeafRewardConfig(object.leafRewardConfig) }
 }
 
 export function isMeaningfulLocalState(state: PersistedState): boolean {
   function comparable(value: PersistedState) {
     const copy = JSON.parse(JSON.stringify(value)) as PersistedState
+    copy.leafRewardConfig = normalizeLeafRewardConfig(copy.leafRewardConfig)
     // These dates record when defaults were generated, not user activity.
     delete (copy.rewardProgress as Partial<PersistedState['rewardProgress']>).updatedAt
     for (const reward of copy.rewards) {
@@ -72,6 +79,7 @@ export function isMeaningfulLocalState(state: PersistedState): boolean {
       delete (reward as Partial<typeof reward>).updatedAt
     }
     delete copy.initialLeafBaselineVersion
+    if (!copy.leafPunishment) delete (copy as Partial<PersistedState>).leafPunishment
     return copy
   }
   return canonicalJson(comparable(state)) !== canonicalJson(comparable(createFreshState()))

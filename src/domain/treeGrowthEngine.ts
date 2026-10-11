@@ -1,5 +1,6 @@
 import type { GrowthEngineResult, PracticeRecord, TreeState } from './types'
 import { INITIAL_EARNED_LEAF_COUNT } from './initialLeafBaseline'
+import { calculatePracticeWater } from './water'
 
 export const createInitialTreeState = (): TreeState => ({
   treeHealth: 75,
@@ -27,19 +28,12 @@ export const createInitialTreeState = (): TreeState => ({
   message: 'Your Music Tree is glowing softly tonight.',
 })
 
-const getWaterUnits = (minutes: number) => {
-  if (minutes <= 0) return 0
-  if (minutes <= 9) return 1
-  if (minutes <= 19) return 2
-  return 3
-}
-
 export const calculatePracticeGrowth = (
   currentState: TreeState,
   practice: PracticeRecord,
+  waterAmount = calculatePracticeWater(practice),
 ): GrowthEngineResult => {
   const effectiveMinutes = Math.min(Math.max(practice.minutes, 0), 120)
-  const waterAmount = getWaterUnits(effectiveMinutes)
   const achievementLeaves = 0
   const improvementFlowerBoost = {
     none: 0,
@@ -50,7 +44,8 @@ export const calculatePracticeGrowth = (
 
   const nextState: TreeState = {
     ...currentState,
-    waterBalance: Math.min(currentState.waterBalance + waterAmount, 3),
+    // Legacy backup field only; authoritative Water is selected by activity date.
+    waterBalance: currentState.waterBalance,
     rootStrength: currentState.rootStrength,
     leafCount: Math.max(currentState.leafCount + achievementLeaves, 12),
     flowerCount: currentState.flowerCount + (improvementFlowerBoost > 0 ? 1 : 0),
@@ -79,7 +74,7 @@ export const calculatePracticeGrowth = (
     changes.push({ type: 'flower', amount: 1, label: 'crystal flower' })
   }
 
-  let message = 'Your music gave the tree a little glow.'
+  let message = 'Your practice was saved.'
   if (waterAmount > 0 && achievementLeaves > 0) {
     message = 'Your music gave the tree two water drops. A new crystal leaf appeared.'
   } else if (waterAmount > 0) {

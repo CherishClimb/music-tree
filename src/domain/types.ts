@@ -1,3 +1,5 @@
+import type { LeafRewardConfig } from './leafReward'
+
 export type AppRole = 'child' | 'parent' | 'teacher'
 
 export type QualityLevel = 'difficult' | 'normal' | 'focused'
@@ -86,6 +88,8 @@ export interface ChildProfile {
   id: string
   displayName: string
   avatarId: AvatarId
+  // Older profiles omit this; missing settings use the default automatic rules.
+  leafRewardConfig?: LeafRewardConfig
 }
 
 

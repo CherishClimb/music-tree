@@ -30,18 +30,34 @@ describe('practice growth engine', () => {
 
   it('gives the expected water for 10 minutes', () => {
     const next = calculatePracticeGrowth(createInitialTreeState(), makePractice(10, 'normal'))
-    expect(next.updatedState.waterBalance).toBeGreaterThanOrEqual(2)
-    expect(next.updatedState.waterBalance).toBeLessThanOrEqual(3)
+    expect(next.changes).toContainEqual({ type: 'water', amount: 2, label: 'water' })
+    expect(next.updatedState.waterBalance).toBe(0)
   })
 
   it('caps daily water at the normal maximum for 30 minutes', () => {
     const next = calculatePracticeGrowth(createInitialTreeState(), makePractice(30, 'focused'))
-    expect(next.updatedState.waterBalance).toBe(3)
+    expect(next.changes).toContainEqual({ type: 'water', amount: 3, label: 'water' })
+    expect(next.updatedState.waterBalance).toBe(0)
   })
 
   it('does not exceed the daily reward cap at 60 minutes', () => {
     const next = calculatePracticeGrowth(createInitialTreeState(), makePractice(60, 'focused'))
-    expect(next.updatedState.waterBalance).toBe(3)
+    expect(next.changes).toContainEqual({ type: 'water', amount: 3, label: 'water' })
+    expect(next.updatedState.waterBalance).toBe(0)
+  })
+
+  it.each([1, 2, 3, 4])('does not claim Water or glow for %s minutes', (minutes) => {
+    const initial = createInitialTreeState()
+    const result = calculatePracticeGrowth(initial, makePractice(minutes, 'focused', [], 'none'))
+    expect(result.changes).toEqual([])
+    expect(result.updatedState.glowLevel).toBe(initial.glowLevel)
+    expect(result.message).not.toMatch(/water|glow|sparkle/i)
+  })
+
+  it('keeps legacy waterBalance unchanged instead of accumulating across dates', () => {
+    const initial = { ...createInitialTreeState(), waterBalance: 2 }
+    const result = calculatePracticeGrowth(initial, makePractice(20, 'focused'))
+    expect(result.updatedState.waterBalance).toBe(2)
   })
 
   it('does not advance the permanent stage from practice minutes', () => {

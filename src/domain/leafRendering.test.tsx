@@ -53,13 +53,14 @@ describe('unlimited deterministic leaf rendering', () => {
     }
   })
 
-  it('keeps earned totals across stage plans and renders only health-visible leaves', () => {
+  it('keeps earned totals across stage plans and renders the remaining punished balance', () => {
     const earned = 175
     expect(createLeafRenderPlan(2, earned).representedLeafCount).toBe(earned)
     expect(createLeafRenderPlan(5, earned).representedLeafCount).toBe(earned)
-    const leafState = selectLeafState({ migrationBaseEarnedLeafCount: earned, events: [], childId: 'child-1', health: 40 })
+    const leafState = selectLeafState({ migrationBaseEarnedLeafCount: earned, events: [], childId: 'child-1', health: 40, appliedPunishmentLoss: 10 })
     const plan = createLeafRenderPlan(5, leafState.visibleLeafCount)
     expect(plan.representedLeafCount).toBe(leafState.visibleLeafCount)
+    expect(plan.representedLeafCount).toBe(165)
     expect(leafState.earnedLeafCount).toBe(earned)
   })
 

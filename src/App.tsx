@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import './App.css'
 import { MusicTree } from './components/tree/MusicTree'
 import { localRepository } from './data/localRepository'
+import { startLeafPunishmentLifecycle } from './data/leafPunishmentLifecycle'
 import { createInitialTreeState } from './domain/treeGrowthEngine'
 import { getPermissionsForRole, MVP_ROLE_NOTE } from './domain/permissions'
 import { chooseRandomReward, type FamilyReward, type SpecialFruit } from './domain/specialFruitEngine'
@@ -16,7 +17,9 @@ import { confirmHomeworkRemoval } from './domain/homeworkRemoval'
 import { selectDominantPendingReminder, type RewardReminderStatus } from './domain/rewardReminder'
 import { VacationManager } from './components/parent/VacationManager'
 import { ParentStageProgress } from './components/parent/ParentStageProgress'
+import { LeafRewardSettings } from './components/parent/LeafRewardSettings'
 import { SUPPORTED_REWARD_FRUIT_TYPES, type ParentReward, type RewardFruitType } from './domain/parentReward'
+import type { LeafRewardConfig } from './domain/leafReward'
 import { isCalendarDate, localCalendarDate } from './domain/localCalendarDate'
 import { countDailyPracticeRecords, MAX_DAILY_PRACTICE_RECORDS, selectDailyWater } from './domain/water'
 import type { LeafState } from './domain/leafGrowth'
@@ -31,8 +34,12 @@ const roleLabel: Record<AppRole, string> = {
 }
 
 const defaultRewardName = 'Choose the family movie'
+const punishmentSnapshot = () => JSON.stringify(localRepository.getLeafPunishmentLedger())
 
 function App() {
+  // CloudGate mounts App only after hydration and unmounts it during conflicts.
+  // The snapshot is read-only; lifecycle mutations run in the effect below.
+  useSyncExternalStore(localRepository.subscribeToPersistence, punishmentSnapshot, punishmentSnapshot)
   const [role, setRole] = useState<AppRole>(initialRole)
   const [treeState, setTreeState] = useState<TreeState>(() => ({
     ...createInitialTreeState(),
@@ -64,13 +71,17 @@ function App() {
   const [homeworkType, setHomeworkType] = useState<HomeworkItemType>('piece')
   const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null)
   const [homeworkError, setHomeworkError] = useState('')
-  const [repositoryWarning] = useState(() => localRepository.getLoadWarning())
+  const [repositoryWarning, setRepositoryWarning] = useState(() => localRepository.getLoadWarning())
   const [childProfile, setChildProfile] = useState(() => localRepository.getChildProfile())
   const [profileName, setProfileName] = useState(() => localRepository.getChildProfile().displayName)
   const [profileAvatar, setProfileAvatar] = useState(() => localRepository.getChildProfile().avatarId)
   const [profileMessage, setProfileMessage] = useState('')
   const [rewardReminders, setRewardReminders] = useState(() => localRepository.getRewardReminders())
   const [dismissedReminderIds, setDismissedReminderIds] = useState<string[]>([])
+  const [leafRewardConfig, setLeafRewardConfig] = useState(() => localRepository.getLeafRewardConfig())
+
+  useEffect(() => startLeafPunishmentLifecycle(localRepository,
+    (error) => setRepositoryWarning(error ?? localRepository.getLoadWarning())), [])
 
   const permissions = useMemo(() => getPermissionsForRole(role), [role])
   const developerToolsAvailable = import.meta.env.DEV
@@ -80,6 +91,7 @@ function App() {
   const currentHealth = localRepository.getCurrentHealth(currentLocalDate)
   const currentLeafState: LeafState = localRepository.getLeafState(currentLocalDate)
   const visibleTreeState = { ...treeState, leafCount: currentLeafState.visibleLeafCount }
+  const selectedDateWater = selectDailyWater(records, childProfile.id, practiceDate)
   const selectedDatePracticeRecordCount = countDailyPracticeRecords(records, childProfile.id, practiceDate)
   const practiceDateValid = isCalendarDate(practiceDate) && practiceDate <= currentLocalDate
   const practiceDateLabel = practiceDate === currentLocalDate ? 'today' : `for ${practiceDate}`
@@ -208,6 +220,11 @@ function App() {
     setChildProfile(profile)
     setProfileName(profile.displayName)
     setProfileAvatar(profile.avatarId)
+    setLeafRewardConfig(localRepository.getLeafRewardConfig())
+  }
+
+  const saveLeafRewardConfig = (config: LeafRewardConfig) => {
+    setLeafRewardConfig(localRepository.updateLeafRewardConfig(config))
   }
 
   const saveChildProfile = () => {
@@ -276,7 +293,7 @@ function App() {
           <div className="tree-stats">
             <span>Stage {effectiveStage}</span>
             <span>{TREE_STAGE_BLUEPRINTS[effectiveStage].name}</span>
-            <span>Leaves {currentLeafState.earnedLeafCount}</span>
+            <span>Leaves {currentLeafState.visibleLeafCount}</span>
             <span>Flowers {treeState.flowerCount}</span>
             <span>Glow {treeState.glowLevel}</span>
           </div>
@@ -349,9 +366,12 @@ function App() {
                 Save practice
               </button>
               {practiceFormMessage && <p className="form-message" role="status">{practiceFormMessage}</p>}
+              {practiceDateValid && <p className="practice-limit-note">Water {practiceDateLabel}: {selectedDateWater}/3</p>}
               {practiceDateValid && <p className="practice-limit-note">{selectedDatePracticeRecordCount >= MAX_DAILY_PRACTICE_RECORDS ? `Three practice moments are safely saved ${practiceDate === currentLocalDate ? 'for today' : practiceDateLabel}.` : `${selectedDatePracticeRecordCount} of ${MAX_DAILY_PRACTICE_RECORDS} practice moments saved ${practiceDateLabel}.`}</p>}
             </div>
           )}
+
+          {role === 'parent' && <LeafRewardSettings value={leafRewardConfig} onSave={saveLeafRewardConfig} />}
 
           {role === 'parent' && (
             <div className="card form-card homework-manager parent-homework-editor" data-parent-section="homework-editor">
