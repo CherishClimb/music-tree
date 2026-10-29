@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createFreshState, createLocalRepository, parseBackup, STORAGE_KEY, type PersistedState } from './localRepository'
+import { CREATURE_POSITIONS_STORAGE_KEY, createFreshState, createLocalRepository, parseBackup, STORAGE_KEY, type PersistedState } from './localRepository'
 import { isMeaningfulLocalState, validateCloudState } from './cloudState'
 import { createCloudSync } from './cloudSync'
 import type { CloudMusicTreeRepository, CloudState } from './cloudMusicTreeRepository'
@@ -201,5 +201,19 @@ describe('persisted creature rewards', () => {
     expect(restored.getCreatureCollection()).toEqual(repository.getCreatureCollection())
     expect(random).toHaveBeenCalledTimes(1)
     sync.stop()
+  })
+
+  it('keeps placements local and separate from backup and cloud snapshots', () => {
+    const storage = new MemoryStorage()
+    const repository = createLocalRepository(storage)
+    repository.saveCreaturePosition('bellwing-bird', { x: 0.25, y: 0.75 })
+    expect(JSON.parse(storage.getItem(CREATURE_POSITIONS_STORAGE_KEY)!)).toEqual({ 'bellwing-bird': { x: 0.25, y: 0.75 } })
+    expect(repository.exportBackupJson()).not.toContain('creature-positions')
+
+    repository.loadSnapshot(JSON.stringify(createFreshState()))
+    expect(repository.getCreaturePositions()['bellwing-bird']).toEqual({ x: 0.25, y: 0.75 })
+    const otherDevice = createLocalRepository(new MemoryStorage())
+    otherDevice.restoreBackupJson(repository.exportBackupJson())
+    expect(otherDevice.getCreaturePositions()).toEqual({})
   })
 })

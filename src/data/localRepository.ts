@@ -16,10 +16,12 @@ import { evaluateLeafRewardEligibility, normalizeLeafRewardConfig, type LeafRewa
 import { INITIAL_EARNED_LEAF_COUNT, INITIAL_LEAF_BASELINE_VERSION } from '../domain/initialLeafBaseline'
 import { appliedLeafPunishmentLoss, LeafPunishmentDataError, reconcileLeafPunishmentLedger, shiftPunishmentDate, validateLeafPunishmentLedger, type LeafPunishmentLedger } from './leafPunishmentLedger'
 
-import type { CreatureId } from '../domain/creatures/creatureCatalog'
+import { isCreatureId, type CreatureId } from '../domain/creatures/creatureCatalog'
 import { createCreatureCollection, isCreatureCollection, migrateCreatureCollection, sendCreatureHome, showCreatureOnTree, selectCreatureProgress, unlockEarnedCreatures, type CreatureCollection } from '../domain/creatures/creatureCollection'
+import { isCreaturePosition, parseCreaturePositions, type CreaturePosition, type CreaturePositions } from '../domain/creatures/creaturePosition'
 
 export const STORAGE_KEY = 'music-tree:mvp:v1'
+export const CREATURE_POSITIONS_STORAGE_KEY = 'music-tree:creature-positions:v1'
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 export type PersistedState = {
@@ -231,6 +233,16 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     }
   }
   let state = load()
+  const loadCreaturePositions = (): CreaturePositions => {
+    try {
+      const raw = storage?.getItem(CREATURE_POSITIONS_STORAGE_KEY)
+      return raw ? parseCreaturePositions(JSON.parse(raw)) : {}
+    } catch (error) {
+      console.warn('Saved creature positions could not be loaded.', error)
+      return {}
+    }
+  }
+  let creaturePositions = loadCreaturePositions()
   const persistenceListeners = new Set<(json: string) => void>()
   const notifyPersistence = (json: string) => {
     for (const listener of persistenceListeners) {
@@ -319,8 +331,8 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
         if (!raw) throw new LeafPunishmentDataError('The saved leaf punishment activation is missing. Export the current copy before resolving this conflict.')
         assertPunishmentActivationCompatible(parseBackup(raw))
       }
-      state = load(); syncStats(); syncLeafCount()
-    }, resetDemoData: () => { state = createDemoState(); syncStats(); syncLeafCount(); persist() }, clearStoredData: () => { storage?.removeItem(STORAGE_KEY); state = createFreshState(); persist() }, getLoadWarning: () => loadWarning,
+      state = load(); creaturePositions = loadCreaturePositions(); syncStats(); syncLeafCount()
+    }, resetDemoData: () => { state = createDemoState(); creaturePositions = {}; storage?.removeItem(CREATURE_POSITIONS_STORAGE_KEY); syncStats(); syncLeafCount(); persist() }, clearStoredData: () => { storage?.removeItem(STORAGE_KEY); storage?.removeItem(CREATURE_POSITIONS_STORAGE_KEY); state = createFreshState(); creaturePositions = {}; persist() }, getLoadWarning: () => loadWarning,
     // Explicit opt-in: migration and read selectors never start the clock.
     activateLeafPunishment: () => {
       if (state.leafPunishment) return commitLeafPunishment(state.leafPunishment)
@@ -358,6 +370,14 @@ export const createLocalRepository = (storage?: StorageLike, timeZone = Intl.Dat
     restoreBackupJson: (json: string) => { const restored = clone(parseBackup(json)); assertPunishmentActivationCompatible(restored); const previous = state; state = restored; try { syncStats(); syncRewardReminders(); persist() } catch (error) { state = previous; throw error }; loadWarning = null; return clone(state) },
     sendCreatureHome: (id: CreatureId) => saveCreatureVisit(sendCreatureHome(state.creatureCollection, id)),
     showCreatureOnTree: (id: CreatureId) => saveCreatureVisit(showCreatureOnTree(state.creatureCollection, id)),
+    saveCreaturePosition: (id: CreatureId, position: CreaturePosition) => {
+      if (!isCreatureId(id) || !isCreaturePosition(position)) throw new Error('Choose a valid position inside the Music Tree scene.')
+      const next = { ...creaturePositions, [id]: position }
+      writeStorage(CREATURE_POSITIONS_STORAGE_KEY, JSON.stringify(next))
+      creaturePositions = next
+      return clone(position)
+    },
+    getCreaturePositions: () => clone(creaturePositions),
     getCreatureCollection: () => clone(state.creatureCollection),
     getCreatureProgress: () => selectCreatureProgress(state.creatureCollection, permanentLeafCount(state)),
     getChildProfile: () => clone(state.childProfile), getPracticeRecords: () => clone(state.practiceRecords).sort((left, right) => comparePracticeRecords(right, left)), getTreeState: () => clone(state.treeState), getHomeworkItems: () => clone(state.homeworkItems), getTeacherEvaluations: () => clone(state.teacherEvaluations), getLessonEvaluations: () => clone(state.lessonEvaluations), getCompletedPieces: () => clone(state.completedPieces), getConcerts: () => clone(state.concerts), getRewards: () => clone(state.rewards), getRewardProgress: () => clone(state.rewardProgress), getSpecialFruits: () => clone(state.specialFruits), getStageEntrySnapshots: () => clone(state.stageEntrySnapshots), getLearningCycles: () => clone(state.learningCycles), getRewardReminders: () => clone(state.rewardReminders), getVacationPeriods: () => clone(state.vacationPeriods), getRootAwards: () => clone(state.rootAwards), getParentRewards: () => clone(state.parentRewards), getLeafGrowthEvents: () => clone(state.leafGrowthEvents), getLeafState: (date = today()) => clone(currentLeafState(date)), getDailyWater: (date = today(), childId = state.childProfile.id) => selectDailyWater(state.practiceRecords, childId, date), getCurrentHealth: (date = today()) => currentHealth(date), getHealthReplay: (date = today()) => clone(replayHealth({ practiceRecords: state.practiceRecords, lessonEvaluations: state.lessonEvaluations, currentDate: date, vacationPeriods: state.vacationPeriods })), getCurrentStageProgression: () => clone(evaluateStageProgression(progressionInput())),

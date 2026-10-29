@@ -80,7 +80,7 @@ export function ChildPage({ treeState: suppliedTreeState, practiceRecords, homew
         <section className="child-tree-scene" aria-label="Your magical Music Tree">
           <div className="child-tree-glow" />
           <button type="button" className="story-button" aria-haspopup="dialog" onClick={() => setStoryOpen(true)}><span aria-hidden="true">📖</span> Story</button>
-          <MusicFriends><MusicTree treeState={visualTreeState} stage={stage} childAvatarId={profile.avatarId} parentRewards={parentRewards} onParentRewardSelect={selectParentReward} onLeafSelect={() => setMagicMessage('A new crystal leaf is humming your song.')} onFlowerSelect={() => setMagicMessage('This flower bloomed from your careful practice.')} onFruitSelect={() => setMagicMessage('This fruit remembers a piece you completed.')} /></MusicFriends>
+          <MusicFriends placementEnabled><MusicTree treeState={visualTreeState} stage={stage} childAvatarId={profile.avatarId} parentRewards={parentRewards} onParentRewardSelect={selectParentReward} onLeafSelect={() => setMagicMessage('A new crystal leaf is humming your song.')} onFlowerSelect={() => setMagicMessage('This flower bloomed from your careful practice.')} onFruitSelect={() => setMagicMessage('This fruit remembers a piece you completed.')} /></MusicFriends>
           <p className="tree-whisper" role="status">{magicMessage}</p>
           {unopenedFruit && <button type="button" className="surprise-fruit-button" onClick={() => setMagicMessage('A surprise fruit is waiting to be opened with your family!')}>✦ Unopened surprise fruit</button>}
         </section>
