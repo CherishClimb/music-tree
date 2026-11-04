@@ -104,17 +104,25 @@ describe('creature visits and old variant migration', () => {
     expect(isCreatureCollection(next)).toBe(true)
   })
 
-  it('limits visitors to two and never silently acknowledges a new arrival', () => {
+  it('keeps existing visitors when another arrives and allows all six to visit', () => {
     let collection = unlockEarnedCreatures(createCreatureCollection(), 40, stamp, () => 0)
     for (const owned of collection.ownedCreatures) collection = sendCreatureHome(collection, owned.creatureId)
     collection = showCreatureOnTree(collection, 'bellwing-bird')
     collection = showCreatureOnTree(collection, 'tempo-squirrel')
-    expect(selectVisibleCreatures(collection)).toHaveLength(2)
-    expect(() => showCreatureOnTree(collection, 'melody-moth')).toThrow('Two friends')
+    collection = showCreatureOnTree(collection, 'melody-moth')
+    expect(selectVisibleCreatures(collection)).toHaveLength(3)
     collection = unlockEarnedCreatures(collection, 45, stamp, () => 0)
-    expect(selectVisibleCreatures(collection)).toHaveLength(2)
+    expect(selectVisibleCreatures(collection)).toHaveLength(4)
     expect(selectVisibleCreatures(collection).find((owned) => owned.newlyUnlocked)?.creatureId).toBe('chordling')
-    expect(collection.ownedCreatures.find((owned) => owned.creatureId === 'tempo-squirrel')?.atHome).toBe(true)
+    expect(collection.ownedCreatures.slice(0, 3).every((owned) => !owned.atHome)).toBe(true)
+
+    collection = sendCreatureHome(collection, 'chordling')
+    collection = unlockEarnedCreatures(collection, 55, stamp, () => 0)
+    collection = sendCreatureHome(collection, 'humming-bunny')
+    collection = sendCreatureHome(collection, 'rhythm-sprite')
+    for (const creature of CREATURE_CATALOG) collection = showCreatureOnTree(collection, creature.id)
+    expect(selectVisibleCreatures(collection)).toHaveLength(6)
+    expect(new Set(selectVisibleCreatures(collection).map((owned) => owned.visibleSlotId)).size).toBe(6)
     expect(isCreatureCollection(collection)).toBe(true)
   })
 

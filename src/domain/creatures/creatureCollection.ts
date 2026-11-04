@@ -2,8 +2,8 @@ import { CREATURE_CATALOG, isCreatureId, standardCreatureId, type CreatureId } f
 
 export const LEAVES_PER_CREATURE = 5
 export const FIRST_CREATURE_LEAF_COUNT = 30
-export const VISIBLE_CREATURE_LIMIT = 2
-export type CreatureSlot = 'left' | 'right'
+const CREATURE_SLOTS = ['left', 'right', 'upper-left', 'upper-right', 'lower-left', 'lower-right'] as const
+export type CreatureSlot = typeof CREATURE_SLOTS[number]
 export type OwnedCreature = {
   creatureId: CreatureId
   unlockedAt: string
@@ -26,15 +26,28 @@ export function createCreatureCollection(currentPermanentLeafCount = 0): Creatur
 }
 
 // Only the first pending arrival takes a slot. Other arrivals wait until it is
-// acknowledged. A new arrival may send an already-acknowledged visitor home.
+// acknowledged, while every already-acknowledged visitor keeps visiting.
 export function arrangeCreatureVisits(collection: CreatureCollection): CreatureCollection {
   const arrival = collection.ownedCreatures.find((owned) => owned.newlyUnlocked)
-  const slots: CreatureSlot[] = arrival ? ['right'] : ['left', 'right']
+  const visitors = collection.ownedCreatures.filter((owned) => !owned.atHome && (!owned.newlyUnlocked || owned === arrival))
+  const usedSlots = new Set<CreatureSlot>()
+  const assignedSlots = new Map<CreatureId, CreatureSlot>()
+  for (const owned of visitors) {
+    if (owned.visibleSlotId !== null && !usedSlots.has(owned.visibleSlotId)) {
+      usedSlots.add(owned.visibleSlotId)
+      assignedSlots.set(owned.creatureId, owned.visibleSlotId)
+    }
+  }
+  for (const owned of visitors) {
+    if (assignedSlots.has(owned.creatureId)) continue
+    const slot = CREATURE_SLOTS.find((candidate) => !usedSlots.has(candidate))!
+    usedSlots.add(slot)
+    assignedSlots.set(owned.creatureId, slot)
+  }
   return { ...collection, ownedCreatures: collection.ownedCreatures.map((owned) => {
-    if (owned.newlyUnlocked) return { ...owned, atHome: false, visibleSlotId: owned === arrival ? 'left' : null }
+    if (owned.newlyUnlocked) return { ...owned, atHome: false, visibleSlotId: owned === arrival ? assignedSlots.get(owned.creatureId)! : null }
     if (owned.atHome) return { ...owned, visibleSlotId: null }
-    const slot = slots.shift()
-    return { ...owned, atHome: !slot, visibleSlotId: slot ?? null }
+    return { ...owned, visibleSlotId: assignedSlots.get(owned.creatureId)! }
   }) }
 }
 
@@ -50,7 +63,7 @@ export function isCreatureCollection(value: unknown): value is CreatureCollectio
     if (!owned || !isCreatureId(owned.creatureId) || ids.has(owned.creatureId) ||
       typeof owned.newlyUnlocked !== 'boolean' || typeof owned.atHome !== 'boolean' ||
       typeof owned.unlockedAt !== 'string' || !Number.isFinite(Date.parse(owned.unlockedAt)) ||
-      ![null, 'left', 'right'].includes(owned.visibleSlotId) ||
+      !(owned.visibleSlotId === null || CREATURE_SLOTS.includes(owned.visibleSlotId)) ||
       (owned.atHome && (owned.newlyUnlocked || owned.visibleSlotId !== null)) ||
       (!owned.atHome && !owned.newlyUnlocked && owned.visibleSlotId === null)) return false
     if (owned.visibleSlotId !== null) {
@@ -137,7 +150,6 @@ export function showCreatureOnTree(collection: CreatureCollection, creatureId: C
   const owned = collection.ownedCreatures.find((item) => item.creatureId === creatureId)
   if (!owned) throw new Error('This friend has not arrived yet.')
   if (!owned.atHome) return collection
-  if (selectVisibleCreatures(collection).length >= VISIBLE_CREATURE_LIMIT) throw new Error('Two friends are visiting. Send one home first.')
   return arrangeCreatureVisits({ ...collection, ownedCreatures: collection.ownedCreatures.map((item) =>
     item.creatureId === creatureId ? { ...item, atHome: false } : item) })
 }

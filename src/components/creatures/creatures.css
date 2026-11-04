@@ -3,6 +3,10 @@
 .creature-visitor { position: absolute; z-index: 3; top: 60%; width: clamp(66px, 21%, 128px); display: grid; justify-items: center; }
 .creature-slot-left { left: 0; }
 .creature-slot-right { right: 0; }
+.creature-slot-upper-left { left: 22%; top: 36%; }
+.creature-slot-upper-right { right: 22%; top: 36%; }
+.creature-slot-lower-left { left: 25%; top: 70%; }
+.creature-slot-lower-right { right: 25%; top: 70%; }
 .child-tree-scene button.creature-visitor { padding: 0; border: 0; background: transparent; color: inherit; line-height: 0; touch-action: none; cursor: grab !important; }
 .creature-visitor[data-positioned="true"] { left: clamp(calc(clamp(33px, 10.5%, 64px) + 4px), var(--creature-x), calc(100% - clamp(33px, 10.5%, 64px) - 4px)); right: auto; top: clamp(calc(clamp(33px, 10.5%, 64px) + 4px), var(--creature-y), calc(100% - clamp(33px, 10.5%, 64px) - 4px)); transform: translate(-50%, -50%); }
 .child-tree-scene button.creature-visitor:active { cursor: grabbing !important; }

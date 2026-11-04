@@ -136,20 +136,32 @@ describe('Music Friends arrivals and Creature Home', () => {
     expect(screen.getByRole('img', { name: 'Bellwing Bird' })).toBeTruthy()
   })
 
-  it('reveals queued arrivals one at a time and respects the two-visitor limit', () => {
-    const { repository } = fixture(40)
-    mount(repository)
+  it('reveals queued arrivals one at a time and persists all six visitors and their positions', () => {
+    const { storage, repository } = fixture(55)
+    repository.saveCreaturePosition('rhythm-sprite', { x: 0.6, y: 0.4 })
+    const first = mount(repository)
     expect(screen.getAllByRole('img')).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', { name: /Music Friends/ }))
     const home = screen.getByRole('region', { name: 'Creature Home' })
-    fireEvent.click(within(home).getByRole('button', { name: 'Send Bellwing Bird home' }))
-    expect(screen.getByRole('status').textContent).toContain('Tempo Squirrel')
-    fireEvent.click(within(home).getByRole('button', { name: 'Send Tempo Squirrel home' }))
-    expect(screen.getByRole('status').textContent).toContain('Melody Moth')
-    fireEvent.click(within(home).getByRole('button', { name: 'Show Bellwing Bird on tree' }))
-    expect(selectVisibleCreatures(repository.getCreatureCollection())).toHaveLength(2)
-    expect((screen.getByRole('button', { name: 'Show Tempo Squirrel on tree' }) as HTMLButtonElement).disabled).toBe(true)
-    expect(screen.getByText('Two friends are visiting. Send one home to invite another.')).toBeTruthy()
+    for (const creature of CREATURE_CATALOG) {
+      expect(screen.getByRole('status').textContent).toContain(creature.displayName)
+      fireEvent.click(within(home).getByRole('button', { name: `Send ${creature.displayName} home` }))
+    }
+    expect(screen.queryByRole('status')).toBeNull()
+    for (const creature of CREATURE_CATALOG) {
+      const show = within(home).getByRole('button', { name: `Show ${creature.displayName} on tree` }) as HTMLButtonElement
+      expect(show.disabled).toBe(false)
+      fireEvent.click(show)
+    }
+    expect(selectVisibleCreatures(repository.getCreatureCollection())).toHaveLength(6)
+    expect(screen.getAllByRole('button', { name: /Move .* on tree/ })).toHaveLength(6)
+    expect(screen.queryByText(/friends are visiting/i)).toBeNull()
+
+    first.unmount()
+    const reloaded = createLocalRepository(storage, 'UTC', () => 0)
+    mount(reloaded)
+    expect(selectVisibleCreatures(reloaded.getCreatureCollection())).toHaveLength(6)
+    expect(screen.getByRole('button', { name: /Move Rhythm Sprite on tree/ }).style.getPropertyValue('--creature-x')).toBe('60%')
   })
 
   it('keeps a new arrival visible if saving Send home fails', () => {

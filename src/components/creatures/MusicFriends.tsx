@@ -1,7 +1,7 @@
 import { useId, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { localRepository } from '../../data/localRepository'
 import { CREATURE_CATALOG, type CreatureId } from '../../domain/creatures/creatureCatalog'
-import { selectVisibleCreatures, VISIBLE_CREATURE_LIMIT, type CreatureCollection } from '../../domain/creatures/creatureCollection'
+import { selectVisibleCreatures, type CreatureCollection } from '../../domain/creatures/creatureCollection'
 import type { CreaturePosition } from '../../domain/creatures/creaturePosition'
 import { CreatureIllustration } from './CreatureIllustration'
 import './creatures.css'
@@ -137,16 +137,14 @@ export function MusicFriends({ children, repository = localRepository, placement
       <div className="creature-home-grid">
         {CREATURE_CATALOG.map((creature) => {
           const owned = collection.ownedCreatures.find((item) => item.creatureId === creature.id)
-          const full = visible.length >= VISIBLE_CREATURE_LIMIT
           return <article key={creature.id} className={`creature-home-card${owned ? '' : ' creature-locked'}`}>
             <CreatureIllustration creatureId={creature.id} decorative />
             <h3>{creature.displayName}</h3>
             <p>{!owned ? 'Not here yet' : owned.newlyUnlocked ? (owned.visibleSlotId ? 'New friend!' : 'Waiting to say hello') : owned.atHome ? creature.musicalConcept : 'Visiting your tree'}</p>
-            {owned ? <button type="button" disabled={owned.atHome && full} aria-label={`${owned.atHome ? 'Show' : 'Send'} ${creature.displayName} ${owned.atHome ? 'on tree' : 'home'}`} onClick={() => act(creature.id, !owned.atHome)}>{owned.atHome ? 'Show on tree' : 'Send home'}</button> : <span className="creature-locked-label">Locked</span>}
+            {owned ? <button type="button" aria-label={`${owned.atHome ? 'Show' : 'Send'} ${creature.displayName} ${owned.atHome ? 'on tree' : 'home'}`} onClick={() => act(creature.id, !owned.atHome)}>{owned.atHome ? 'Show on tree' : 'Send home'}</button> : <span className="creature-locked-label">Locked</span>}
           </article>
         })}
       </div>
-      {visible.length >= VISIBLE_CREATURE_LIMIT && <p className="creature-capacity">Two friends are visiting. Send one home to invite another.</p>}
     </section>}
   </div>
 }
