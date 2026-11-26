@@ -56,3 +56,8 @@
 }
 .auth-account-email { overflow-wrap: anywhere; min-width: 0; }
 .auth-logout { padding: 8px 12px; border-radius: 10px; }
+
+/* Password recovery uses the same accessible form surfaces as sign-in. */
+.auth-card .auth-link { border: 0; background: transparent; color: #286358; text-decoration: underline; justify-self: end; }
+.auth-card :is(button,input):focus-visible { outline: 3px solid #286358; outline-offset: 3px; }
+.auth-card :is(p,button) { overflow-wrap: anywhere; }

@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { PasswordResetRequest } from './PasswordResetRequest'
 
-export function LoginScreen({ client, sessionError }: { client: SupabaseClient; sessionError: string }) {
+export function LoginScreen({ client, sessionError, initialRecoveryRequest = false }: {
+  client: SupabaseClient; sessionError: string; initialRecoveryRequest?: boolean
+}) {
+  const [requestingReset, setRequestingReset] = useState(initialRecoveryRequest)
   const [creatingAccount, setCreatingAccount] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -41,6 +45,9 @@ export function LoginScreen({ client, sessionError }: { client: SupabaseClient; 
     }
   }
 
+  if (requestingReset) return <PasswordResetRequest client={client} initialEmail={email}
+    onBack={() => setRequestingReset(false)} />
+
   return <main className="auth-screen">
     <section className="auth-card" aria-labelledby="auth-title">
       <div className="auth-mark" aria-hidden="true">♫</div>
@@ -63,6 +70,10 @@ export function LoginScreen({ client, sessionError }: { client: SupabaseClient; 
           minLength={creatingAccount ? 6 : undefined}
           aria-describedby={creatingAccount ? 'auth-password-help' : undefined}
           value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} />
+        {!creatingAccount && <button className="auth-link" type="button" disabled={busy} onClick={() => {
+          setPassword('')
+          setRequestingReset(true)
+        }}>Forgot Password?</button>}
         {creatingAccount && <p id="auth-password-help" className="auth-help">Use at least 6 characters.</p>}
         {(error || sessionError) && <p className="auth-error" role="alert">{error || sessionError}</p>}
         {message && <p className="auth-message" role="status">{message}</p>}
